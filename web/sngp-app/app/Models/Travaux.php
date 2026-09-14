@@ -5,7 +5,7 @@ use App\Traits\Loggable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class Travail extends Model
+class Travaux extends Model
 {
     use Loggable;
     // On force la table sur "travaux"

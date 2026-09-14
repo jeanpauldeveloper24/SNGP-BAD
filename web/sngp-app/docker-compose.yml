@@ -1,0 +1,57 @@
+services:
+  app:
+    image: 'serversideup/php:8.4-fpm-nginx'
+    container_name: sngp-app-web
+    restart: unless-stopped
+    ports:
+      - "8000:8080"
+      - "5173:5173"
+    volumes:
+      - .:/var/www/html
+    environment:
+      AUTORUN_ENABLED: "false"
+      NGINX_WEB_ROOT: "/var/www/html/public"
+      PHP_OPCACHE_ENABLE: "0"
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: sngp_db
+      DB_USERNAME: sngp_user
+      DB_PASSWORD: secret_password
+    networks:
+      - sngp-network
+    depends_on:
+      - mysql
+
+  mysql:
+    image: 'mysql:8.0'
+    restart: unless-stopped
+    container_name: sngp-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: secret_root_password
+      MYSQL_DATABASE: sngp_db
+      MYSQL_USER: sngp_user
+      MYSQL_PASSWORD: secret_password
+    volumes:
+      - sngp-mysql-data:/var/lib/mysql
+    networks:
+      - sngp-network
+
+  adminer:
+    image: adminer:latest
+    container_name: sngp-adminer
+    restart: unless-stopped
+    ports:
+      - '8081:8080'
+    networks:
+      - sngp-network
+
+networks:
+  sngp-network:
+    driver: bridge
+
+volumes:
+  sngp-mysql-data:
+    driver: local
