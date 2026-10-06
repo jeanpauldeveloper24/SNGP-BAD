@@ -7,16 +7,21 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-
 class Project extends Model
 {
-
-use Loggable;
+    use Loggable;
 
     protected $fillable = [
         'code',
         'nom',
         'description',
+        'secteur_activite',
+        'categorie',
+        'region',
+        'departement',
+        'commune',
+        'ville',
+        'zones_couvertes',
         'budget_initial',
         'budget_devise',
         'budget_value',
@@ -34,6 +39,7 @@ use Loggable;
     ];
 
     protected $casts = [
+        'zones_couvertes'      => 'array',
         'budget_initial'       => 'decimal:2',
         'budget_value'         => 'decimal:2',
         'taux_change'          => 'decimal:4',

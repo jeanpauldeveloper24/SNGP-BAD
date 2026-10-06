@@ -32,9 +32,25 @@
                             <x-secondary-button>Se connecter</x-secondary-button>
                         </a>
                         @if (Route::has('register'))
-                            <a href="{{ route('register') }}">
-                                <x-primary-button>S'inscrire</x-primary-button>
-                            </a>
+                            @php
+                                $adminRole = \App\Models\Role::where('name', 'administrateur_systeme')->first();
+                                $hasAdmin = $adminRole ? \App\Models\User::where('role_id', $adminRole->id)->exists() : \App\Models\User::where('role_id', 1)->exists();
+                                $adminCount = $adminRole ? \App\Models\User::where('role_id', $adminRole->id)->count() : 0;
+                            @endphp
+
+                            @if (!$hasAdmin)
+                                <a href="{{ route('register') }}">
+                                    <x-primary-button>
+                                        S'inscrire (Initialisation Admin)
+                                    </x-primary-button>
+                                </a>
+                            @elseif ($adminCount < 2)
+                                <a href="{{ route('register') }}">
+                                    <x-primary-button>
+                                        S'inscrire
+                                    </x-primary-button>
+                                </a>
+                            @endif
                         @endif
                     @endauth
                 @endif
@@ -51,6 +67,7 @@
         </div>
     </div>
 
+    <!-- Responsive Navigation Menu -->
     <div :class="{'block': open, 'hidden': ! open}" class="hidden md:hidden bg-gray-50 border-t border-gray-200">
         
         <div class="pt-2 pb-3 space-y-1">
@@ -78,11 +95,25 @@
                         </x-secondary-button>
                     </a>
                     @if (Route::has('register'))
-                        <a href="{{ route('register') }}" class="block w-full">
-                            <x-primary-button class="w-full justify-center">
-                                S'inscrire
-                            </x-primary-button>
-                        </a>
+                        @php
+                            $adminRole = \App\Models\Role::where('name', 'administrateur_systeme')->first();
+                            $hasAdmin = $adminRole ? \App\Models\User::where('role_id', $adminRole->id)->exists() : \App\Models\User::where('role_id', 1)->exists();
+                            $adminCount = $adminRole ? \App\Models\User::where('role_id', $adminRole->id)->count() : 0;
+                        @endphp
+
+                        @if (!$hasAdmin)
+                            <a href="{{ route('register') }}" class="block w-full">
+                                <x-primary-button class="w-full justify-center">
+                                    S'inscrire (Initialisation Admin)
+                                </x-primary-button>
+                            </a>
+                        @elseif ($adminCount < 2)
+                            <a href="{{ route('register') }}" class="block w-full">
+                                <x-primary-button class="w-full justify-center">
+                                    S'inscrire
+                                </x-primary-button>
+                            </a>
+                        @endif
                     @endif
                 @endauth
             @endif

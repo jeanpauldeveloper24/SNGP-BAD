@@ -82,19 +82,27 @@ Route::middleware('auth')->group(function () {
     Route::get('/paiements', [PaiementController::class, 'index'])->name('menus.paiements');
 
     // 4. GESTION DU PORTEFEUILLE DES PROJETS
-    Route::get('/projets', [ProjectController::class, 'dashboard'])->name('profile.menus.projects.list');
-    Route::get('/projets/creer', [ProjectController::class, 'create'])->name('menus.projects.form');
-    Route::post('/projets/stocker', [ProjectController::class, 'store'])->name('menus.projects.store');
-    Route::get('/projets/{id}/editer', [ProjectController::class, 'edit'])->name('menus.projects.edit');
-    Route::put('/projets/{id}/mettre-a-jour', [ProjectController::class, 'update'])->name('menus.projects.update');
+    // Affichage de la liste
+    Route::get('/projets', [ProjectController::class, 'index'])->name('profile.menus.projects.list');
 
+    // Affichage du formulaire de création
+    Route::get('/projets/creer', [ProjectController::class, 'create'])->name('projects.create');
+
+    // Traitement de la création
+    Route::post('/projets', [ProjectController::class, 'store'])->name('projects.store');
+
+    // Affichage du formulaire d'édition
+    Route::get('/projets/{id}/editer', [ProjectController::class, 'edit'])->name('projects.edit');
+
+    // Traitement de la mise à jour (C'est la route manquante !)
+    Route::put('/projets/{id}', [ProjectController::class, 'update'])->name('projects.update');
+    
     // ========================================================================
     // GESTION INTERNE DES MARCHÉS & PASSATION (PRIVÉ)
     // ========================================================================
     Route::get('/passation', [MarketController::class, 'index'])->name('passation.index');
     Route::get('/passation/create', [MarketController::class, 'create'])->name('menus.marches.create');
-    Route::post('/passation', [MarketController::class, 'store'])->name('menus.marches.store');
-
+    Route::post('/passation', [MarketController::class, 'store'])->name('passation.store');
     // Mettre à jour le cycle de vie / étape d'un marché spécifique
     Route::get('/passation/{marche}/etape', [MarketController::class, 'editEtape'])->name('passation.edit-etape');
     Route::put('/passation/{marche}/etape', [MarketController::class, 'updateEtape'])->name('passation.update-etape');

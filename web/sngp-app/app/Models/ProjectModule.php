@@ -16,7 +16,6 @@ class ProjectModule extends Model
      */
     protected $fillable = [
         'project_id',
-        'market_id',
         'number',
         'description',
         'besoin_financier',
@@ -39,14 +38,6 @@ class ProjectModule extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
-    }
-
-    /**
-     * Marché individuel directement rattaché (si clé étrangère market_id).
-     */
-    public function market(): BelongsTo
-    {
-        return $this->belongsTo(Market::class, 'market_id');
     }
 
     /**

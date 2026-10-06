@@ -6,6 +6,9 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Exécuter la migration.
+     */
     public function up(): void
     {
         Schema::create('project_modules', function (Blueprint $table) {
@@ -17,20 +20,24 @@ return new class extends Migration
                   ->onDelete('cascade');
 
             // Informations de repérage et description
-            $table->integer('number'); // Numéro ou ordre du module (ex: 1, 2, 3)
+            $table->integer('number'); // Numéro ou ordre du module/composante (ex: 1, 2, 3)
             $table->string('description');
             
             // Gestion financière du module
             $table->decimal('besoin_financier', 15, 2)->default(0.00);
-            $table->string('devise', 10)->default('XOF');
+            $table->string('devise', 10)->default('FCFA');
             
-            // Planning / Durée
+            // Planning / Durée & Statut
             $table->string('duree')->nullable(); // Ex: "6 mois", "Q1-Q3 2026"
+            $table->string('status')->default('Actif');
             
             $table->timestamps();
         });
     }
 
+    /**
+     * Annuler la migration.
+     */
     public function down(): void
     {
         Schema::dropIfExists('project_modules');

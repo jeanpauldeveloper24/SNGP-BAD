@@ -1,327 +1,257 @@
 <x-app-layout>
-    <div class="py-6 px-4 sm:px-6 lg:px-8">
-        <div class="max-w-5xl mx-auto space-y-8">
-            
-            {{-- En-tête de la page --}}
-            <div class="mb-8 border-b border-gray-200 pb-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                    <h2 class="text-2xl font-bold tracking-tight text-gray-900">
-                        {{ (isset($marche) && $marche->exists) ? 'Régulation & Édition du Marché' : 'Initialisation du Marché Public' }}
-                    </h2>
-                    <p class="mt-1 text-sm text-gray-600">
-                        Gestion des étapes d'attribution, du dépôt des candidatures et des exigences techniques/financières.
-                    </p>
-                </div>
-                <div>
-                    <span class="inline-flex items-center rounded-md bg-cyan-50 px-3 py-1.5 text-xs font-semibold text-cyan-700 ring-1 ring-inset ring-cyan-700/10 uppercase tracking-wider">
-                        Procédure de Passation
-                    </span>
-                </div>
-            </div>
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+            Nouveau marché public
+        </h2>
+    </x-slot>
 
-            <form action="{{ (isset($marche) && $marche->exists) ? route('passation.update-etape', $marche) : route('menus.marches.store') }}" method="POST" class="space-y-8">
-                @csrf
-                @if(isset($marche) && $marche->exists)
-                    @method('PUT')
-                @endif
+    <div class="py-12" x-data="marcheForm(@js($projects))">
+        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
+                
+                <div class="mb-6">
+                    <h1 class="text-2xl font-bold text-gray-800">Nouveau marché public</h1>
+                    <p class="text-gray-600">Renseignez les informations générales, le rattachement au projet et les spécifications du marché.</p>
+                </div>
 
-                {{-- SECTION 1 : CARACTÉRISTIQUES GÉNÉRALES --}}
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div class="px-6 py-4 bg-gray-50 border-b border-gray-100">
-                        <h3 class="text-xs font-bold text-cyan-700 uppercase tracking-wider">1. Caractéristiques Générales</h3>
-                    </div>
-                    <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                        
-                        <div class="md:col-span-2">
-                            <label for="objet" class="block text-xs font-semibold text-gray-700 uppercase">Objet du Marché (Nature de la prestation)</label>
-                            <input type="text" name="objet" id="objet" value="{{ old('objet', $marche->objet ?? '') }}" placeholder="ex: Travaux de construction d'un forage ou Fourniture de matériel informatique..." class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 text-xs font-medium text-gray-900" required>
-                            @error('objet') <p class="mt-1 text-xs text-red-600 font-medium">{{ $message }}</p> @enderror
+                <form action="{{ route('passation.store') }}" method="POST" class="space-y-6">
+                    @csrf
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- N° de Référence -->
+                        <div>
+                            <label for="reference" class="block text-sm font-medium text-gray-700">N° de Référence</label>
+                            <input type="text" name="reference" id="reference" placeholder="Ex: DAO-001/PORO/2026"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
                         </div>
 
-                        {{-- Sélection du Projet --}}
+                        <!-- Objet du marché -->
                         <div>
-                            <label for="project_id" class="block text-xs font-semibold text-gray-700 uppercase">Ligne Projet Associée</label>
-                            <select name="project_id" id="project_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 text-xs text-gray-800" required>
-                                <option value="" disabled selected>-- Sélectionner un projet --</option>
-                                @foreach($projects as $proj)
-                                    <option value="{{ $proj->id }}" {{ (old('project_id', $marche->project_id ?? '') == $proj->id) ? 'selected' : '' }}>
-                                        [{{ $proj->code }}] {{ $proj->nom }}
-                                    </option>
+                            <label for="objet" class="block text-sm font-medium text-gray-700">Objet du marché <span class="text-red-500">*</span></label>
+                            <input type="text" name="objet" id="objet" required placeholder="Ex: Fourniture et pose de matériel..."
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                        </div>
+
+                        <!-- Projet associé -->
+                        <div>
+                            <label for="project_id" class="block text-sm font-medium text-gray-700">Projet associé <span class="text-red-500">*</span></label>
+                            <select name="project_id" id="project_id" required x-model="selectedProjectId" @change="onProjectChange"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                                <option value="">-- Sélectionner un projet --</option>
+                                @foreach($projects as $project)
+                                    <option value="{{ $project->id }}">{{ $project->code }} - {{ $project->nom }}</option>
                                 @endforeach
                             </select>
-                            @error('project_id') <p class="mt-1 text-xs text-red-600 font-medium">{{ $message }}</p> @enderror
                         </div>
 
-                        {{-- Sélection du Module --}}
+                        <!-- Composante / Module -->
                         <div>
-                            <label for="project_module_id" class="block text-xs font-semibold text-gray-700 uppercase">Module / Composante rattachée</label>
-                            <select name="project_module_id" id="project_module_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 text-xs text-gray-800" required>
-                                <option value="" disabled selected>-- Veuillez d'abord choisir un projet --</option>
+                            <label for="module_id" class="block text-sm font-medium text-gray-700">Composante / Module</label>
+                            <select name="module_id" id="module_id" x-model="selectedModuleId" @change="onModuleChange"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                                <option value="">-- Sélectionner une composante --</option>
+                                <template x-for="module in availableModules" :key="module.id">
+                                    <option :value="module.id" x-text="module.description"></option>
+                                </template>
                             </select>
-                            @error('project_module_id') <p class="mt-1 text-xs text-red-600 font-medium">{{ $message }}</p> @enderror
                         </div>
 
-                        <div class="md:col-span-2">
-                            <label for="status" class="block text-xs font-semibold text-gray-700 uppercase">État Actuel du Marché</label>
-                            <select name="status" id="status" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 text-xs font-bold text-gray-700" required>
-                                <option value="Non attribué" {{ (old('status', $marche->status ?? '') == 'Non attribué') ? 'selected' : '' }}>Non attribué</option>
-                                <option value="En cours d'attribution" {{ (old('status', $marche->status ?? '') == 'En cours d\'attribution') ? 'selected' : '' }}>En cours d'attribution</option>
-                                <option value="Attribué" {{ (old('status', $marche->status ?? '') == 'Attribué') ? 'selected' : '' }}>Attribué</option>
-                            </select>
-                            @error('status') <p class="mt-1 text-xs text-red-600 font-medium">{{ $message }}</p> @enderror
-                        </div>
-
-                    </div>
-                </div>
-
-                {{-- SECTION 2 : CAHIER DES CHARGES / BESOINS MATÉRIELS --}}
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div class="px-6 py-4 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+                        <!-- Méthode de Passation -->
                         <div>
-                            <h3 class="text-xs font-bold text-cyan-700 uppercase tracking-wider">Cahier des Charges (Besoins Matériels)</h3>
-                            <p class="text-[11px] text-gray-500 mt-0.5">Saisissez les besoins matériels indispensables à l'exécution du marché.</p>
+                            <label for="methode_passation" class="block text-sm font-medium text-gray-700">Méthode de Passation</label>
+                            <select name="methode_passation" id="methode_passation"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                                <option value="">-- Mode de passation --</option>
+                                <option value="AOI">Appel d'Offres International (AOI)</option>
+                                <option value="AON">Appel d'Offres National (AON)</option>
+                                <option value="AOR">Appel d'Offres Restreint</option>
+                                <option value="Gré à Gré">Gré à Gré / Entente Directe</option>
+                            </select>
                         </div>
-                        <button type="button" id="add-row" class="inline-flex items-center space-x-1 px-3 py-1.5 bg-cyan-50 text-cyan-700 rounded-lg text-xs font-semibold hover:bg-cyan-100 transition">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                            <span>Ajouter une ligne</span>
-                        </button>
+
+                        <!-- Étape actuelle -->
+                        <div>
+                            <label for="etape_actuelle" class="block text-sm font-medium text-gray-700">Étape actuelle</label>
+                            <select name="etape_actuelle" id="etape_actuelle"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                                <option value="EXPRESSION_BESOIN">01 - Expression du besoin</option>
+                                <option value="REDACTION_DAO">02 - Rédaction du DAO</option>
+                                <option value="VALIDATION_DGMP">03 - Validation DGMP</option>
+                                <option value="PUBLICATION_AVIS">04 - Publication de l'Avis</option>
+                                <option value="RECEPTION_OFFRES">05 - Réception des offres</option>
+                                <option value="OUVERTURE_PLIS">06 - Ouverture des plis</option>
+                                <option value="EVALUATION_TECHNIQUE">07 - Évaluation Technique</option>
+                                <option value="ATTRIBUTION_PROVISOIRE">08 - Attribution Provisoire</option>
+                                <option value="SIGNATURE_CONTRAT">09 - Signature du Contrat</option>
+                                <option value="ORDRE_SERVICE">10 - Ordre de Service (OS)</option>
+                                <option value="PREMIER_VERSEMENT">11 - 1er versement</option>
+                                <option value="EXECUTION_TRAVAUX">12 - Exécution des travaux</option>
+                                <option value="SECOND_VERSEMENT">13 - 2nd versement</option>
+                                <option value="RECEPTION_DEFINITIVE">14 - Réception définitive</option>
+                            </select>
+                        </div>
+
+                        <!-- Montant Prévisionnel / Besoin Financier -->
+                        <div>
+                            <label for="montant_previsionnel" class="block text-sm font-medium text-gray-700">Montant Prévisionnel / Besoin Financier</label>
+                            <input type="number" step="0.01" name="montant_previsionnel" id="montant_previsionnel" x-model="besoinFinancier"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                        </div>
+
+                        <!-- Devise -->
+                        <div>
+                            <label for="devise" class="block text-sm font-medium text-gray-700">Devise</label>
+                            <select name="devise" id="devise"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                                <option value="USD">USD ($)</option>
+                                <option value="XOF">FCFA (XOF)</option>
+                                <option value="EUR">Euro (EUR)</option>
+                            </select>
+                        </div>
+
+                        <!-- Statut d'Attribution -->
+                        <div>
+                            <label for="statut" class="block text-sm font-medium text-gray-700">Statut d'Attribution</label>
+                            <select name="statut" id="statut"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                                <option value="Non attribué">Non attribué</option>
+                                <option value="En cours d'attribution">En cours d'attribution</option>
+                                <option value="Attribué">Attribué</option>
+                                <option value="Annulé">Annulé</option>
+                            </select>
+                        </div>
+
+                        <!-- Titulaire / Prestataire Adjugé -->
+                        <div>
+                            <label for="prestataire_id" class="block text-sm font-medium text-gray-700">Titulaire / Prestataire Adjugé</label>
+                            <select name="prestataire_id" id="prestataire_id"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                                <option value="">-- Aucun titulaire (Non attribué) --</option>
+                                @foreach($prestataires as $prestataire)
+                                    <option value="{{ $prestataire->id }}">{{ $prestataire->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <!-- Date de Dépôt (Début) -->
+                        <div>
+                            <label for="date_debut" class="block text-sm font-medium text-gray-700">Date de Dépôt (Début)</label>
+                            <input type="date" name="date_debut" id="date_debut"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                        </div>
+
+                        <!-- Date Limite Dépôt (Fin) -->
+                        <div>
+                            <label for="date_fin" class="block text-sm font-medium text-gray-700">Date Limite Dépôt (Fin)</label>
+                            <input type="date" name="date_fin" id="date_fin"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                        </div>
                     </div>
 
-                    <div class="p-6">
+                    <!-- Spécifications techniques (Formulaire Tableau JSON) -->
+                    <div class="pt-4 border-t border-gray-200">
+                        <div class="flex justify-between items-center mb-3">
+                            <label class="block text-sm font-semibold text-gray-800">Spécifications techniques / Besoins matériels</label>
+                            <button type="button" @click="addItem()" class="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold rounded-md shadow-sm">
+                                + Ajouter une ligne
+                            </button>
+                        </div>
+
+                        <!-- Hidden Input envoyé au Controller en JSON -->
+                        <input type="hidden" name="specifications" :value="JSON.stringify(items)">
+
                         <div class="overflow-x-auto">
-                            <table class="w-full text-left text-xs text-gray-600" id="besoins-table">
-                                <thead class="bg-gray-50 text-gray-700 uppercase font-semibold">
+                            <table class="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-md">
+                                <thead class="bg-gray-50">
                                     <tr>
-                                        <th class="px-4 py-3 rounded-l-lg">Désignation du besoin matériel</th>
-                                        <th class="px-4 py-3 w-32">Quantité</th>
-                                        <th class="px-4 py-3 text-center w-16 rounded-r-lg">Action</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/3">Désignation</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">Quantité</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-5/12">Spécifications</th>
+                                        <th class="px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-1/12">Action</th>
                                     </tr>
                                 </thead>
-                                <tbody class="divide-y divide-gray-100" id="besoins-container">
-                                    @php
-                                        $besoinsMat = old('besoins_materiels', $marche->besoins_materiels ?? [['designation' => '', 'quantite' => 1]]);
-                                    @endphp
-                                    @foreach($besoinsMat as $idx => $mat)
-                                        <tr class="besoin-row">
-                                            <td class="px-4 py-3">
-                                                <input type="text" name="besoins_materiels[{{ $idx }}][designation]" value="{{ $mat['designation'] ?? '' }}" required placeholder="Ex: Ordinateurs portables i7 16Go RAM" class="w-full text-xs rounded-lg border-gray-300 focus:border-cyan-700 focus:ring-cyan-700">
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    <template x-for="(item, index) in items" :key="index">
+                                        <tr>
+                                            <td class="px-3 py-2">
+                                                <input type="text" x-model="item.designation" placeholder="Ex: Panneaux Solaires 550Wp"
+                                                    class="w-full text-xs rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                                             </td>
-                                            <td class="px-4 py-3">
-                                                <input type="number" name="besoins_materiels[{{ $idx }}][quantite]" value="{{ $mat['quantite'] ?? 1 }}" required min="1" class="w-full text-xs rounded-lg border-gray-300 focus:border-cyan-700 focus:ring-cyan-700">
+                                            <td class="px-3 py-2">
+                                                <input type="text" x-model="item.quantite" placeholder="Ex: 2400 unités"
+                                                    class="w-full text-xs rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                                             </td>
-                                            <td class="px-4 py-3 text-center">
-                                                <button type="button" class="remove-row text-red-500 hover:text-red-700 p-1">
-                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                            <td class="px-3 py-2">
+                                                <input type="text" x-model="item.specification" placeholder="Ex: Rendement 21.3%, Garantie 25 ans"
+                                                    class="w-full text-xs rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                            </td>
+                                            <td class="px-3 py-2 text-center">
+                                                <button type="button" @click="removeItem(index)" class="text-red-600 hover:text-red-900 font-bold text-sm">
+                                                    &times;
                                                 </button>
                                             </td>
                                         </tr>
-                                    @endforeach
+                                    </template>
                                 </tbody>
                             </table>
                         </div>
                     </div>
-                </div>
 
-                {{-- SECTION 3 : BESOIN FINANCIER ESTIMÉ --}}
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div class="px-6 py-4 bg-gray-50 border-b border-gray-100">
-                        <h3 class="text-xs font-bold text-cyan-700 uppercase tracking-wider">Besoin Financier Estimé</h3>
+                    <!-- Actions -->
+                    <div class="flex items-center justify-start space-x-4 pt-4 border-t border-gray-200">
+                        <a href="{{ url()->previous() }}" class="text-sm text-gray-600 hover:text-gray-900 underline">Annuler</a>
+                        <button type="submit" class="px-4 py-2 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700 active:bg-indigo-900 focus:outline-none focus:border-indigo-900 focus:ring ring-indigo-300 disabled:opacity-25 transition">
+                            Enregistrer le marché
+                        </button>
                     </div>
-                    <div class="p-6">
-                        <div>
-                            <label for="besoin_financier" class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
-                                Montant du besoin financier / Enveloppe Maximale (FCFA) <span class="text-red-500">*</span>
-                            </label>
-                            <input type="number" name="besoin_financier" id="besoin_financier" step="0.01" min="0" value="{{ old('besoin_financier', $marche->besoin_financier ?? $marche->montant ?? '') }}" required readonly placeholder="Sélectionnez d'abord un module..." class="w-full rounded-xl border-gray-300 bg-gray-100 focus:border-cyan-700 focus:ring-cyan-700 text-xs py-2.5 font-mono font-bold text-amber-800">
-                            <p class="text-[11px] text-gray-400 mt-1">Les offres financières des candidats dépassant ce seuil pourront être automatiquement marquées comme non recevables.</p>
-                            @error('besoin_financier') <p class="mt-1 text-xs text-red-600 font-medium">{{ $message }}</p> @enderror
-                        </div>
-                    </div>
-                </div>
+                </form>
 
-                {{-- SECTION 4 : CHRONOGRAMME --}}
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div class="px-6 py-4 bg-gray-50 border-b border-gray-100">
-                        <h3 class="text-xs font-bold text-cyan-700 uppercase tracking-wider">4. Chronogramme Officiel</h3>
-                    </div>
-                    <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                        <div>
-                            <label for="candidature_start_date" class="block font-semibold text-gray-700 uppercase">Début Dépôt Dossiers</label>
-                            <input type="date" name="candidature_start_date" id="candidature_start_date" value="{{ old('candidature_start_date', isset($marche) && $marche->candidature_start_date ? $marche->candidature_start_date->format('Y-m-d') : '') }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 font-mono">
-                            @error('candidature_start_date') <p class="mt-1 text-xs text-red-600 font-medium">{{ $message }}</p> @enderror
-                        </div>
-                        <div>
-                            <label for="candidature_end_date" class="block font-semibold text-gray-700 uppercase">Fin Dépôt Dossiers</label>
-                            <input type="date" name="candidature_end_date" id="candidature_end_date" value="{{ old('candidature_end_date', isset($marche) && $marche->candidature_end_date ? $marche->candidature_end_date->format('Y-m-d') : '') }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 font-mono">
-                            @error('candidature_end_date') <p class="mt-1 text-xs text-red-600 font-medium">{{ $message }}</p> @enderror
-                        </div>
-                    </div>
-                </div>
-
-                {{-- SECTION 5 : TITULAIRE --}}
-                <div id="section_prestataire" class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-300">
-                    <div class="px-6 py-4 bg-gray-50 border-b border-gray-100">
-                        <h3 class="text-xs font-bold text-emerald-700 uppercase tracking-wider">5. Titulaire du Marché (Uniquement si Attribué)</h3>
-                    </div>
-                    <div class="p-6">
-                        <label for="user_id" class="block text-xs font-semibold text-gray-700 uppercase">Sélectionner l'entreprise adjudicataire (Rôle: PRESTATAIRE)</label>
-                        <select name="user_id" id="user_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-600 focus:ring-emerald-600 text-xs font-bold text-gray-900">
-                            <option value="" selected>-- Aucun attributaire désigné pour le moment --</option>
-                            @foreach($prestataires as $prestataire)
-                                <option value="{{ $prestataire->id }}" {{ (old('user_id', $marche->user_id ?? '') == $prestataire->id) ? 'selected' : '' }}>
-                                    🏢 {{ $prestataire->name }} (ID: {{ $prestataire->id }})
-                                </option>
-                            @endforeach
-                        </select>
-                        <p class="text-[11px] text-gray-400 mt-2">L'utilisateur sélectionné doit posséder le rôle fonctionnel PRESTATAIRE afin d'interagir avec l'écosystème Flutter terrain.</p>
-                        @error('user_id') <p class="mt-1 text-xs text-red-600 font-medium">{{ $message }}</p> @enderror
-                    </div>
-                </div>
-
-                {{-- Actions Formulaire --}}
-                <div class="flex items-center justify-end space-x-4 border-t border-gray-200 pt-6">
-                    <a href="{{ route('passation.index') }}" class="rounded-md border border-gray-300 bg-white py-2 px-4 text-xs font-bold text-gray-700 shadow-sm hover:bg-gray-50 uppercase tracking-wider transition">
-                        Annuler
-                    </a>
-                    <button type="submit" class="rounded-md bg-emerald-600 py-2 px-6 text-xs font-bold text-white shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 uppercase tracking-wider transition">
-                        {{ (isset($marche) && $marche->exists) ? '⚡ Mettre à jour le dossier' : '💾 Enregistrer le projet de marché' }}
-                    </button>
-                </div>
-            </form>
-
+            </div>
         </div>
     </div>
 
-    {{-- Script JS Unifié --}}
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            // 1. Dynamic Modules Cascading Dropdown & Data-Besoin Mapping
-            const projectsData = @json($projects);
-            const projectSelect = document.getElementById('project_id');
-            const moduleSelect = document.getElementById('project_module_id');
-            const besoinInput = document.getElementById('besoin_financier');
-            const selectedModuleId = "{{ old('project_module_id', $marche->project_module_id ?? '') }}";
+        function marcheForm(initialProjects) {
+            return {
+                projects: initialProjects || [],
+                selectedProjectId: '',
+                selectedModuleId: '',
+                availableModules: [],
+                besoinFinancier: 0,
+                items: [
+                    { designation: '', quantite: '', specification: '' }
+                ],
 
-            function triggerBesoinUpdate() {
-                const selectedOption = moduleSelect.options[moduleSelect.selectedIndex];
-                if (selectedOption && selectedOption.dataset.besoin !== undefined) {
-                    besoinInput.value = selectedOption.dataset.besoin;
-                }
-            }
+                addItem() {
+                    this.items.push({ designation: '', quantite: '', specification: '' });
+                },
 
-            function updateModulesOptions(selectedProjectId, preselectedModuleId = null) {
-                moduleSelect.innerHTML = '<option value="" disabled selected>-- Sélectionner un module --</option>';
-                
-                const selectedProject = projectsData.find(p => String(p.id) === String(selectedProjectId));
-                
-                if (selectedProject && selectedProject.modules && selectedProject.modules.length > 0) {
-                    selectedProject.modules.forEach(mod => {
-                        const option = document.createElement('option');
-                        option.value = mod.id;
-                        option.textContent = mod.description ?? mod.nom ?? mod.title ?? `Module #${mod.id}`;
-                        
-                        // Stockage du besoin financier dans le dataset HTML
-                        if (mod.besoin_financier !== undefined && mod.besoin_financier !== null) {
-                            option.dataset.besoin = mod.besoin_financier;
-                        }
-                        
-                        if (preselectedModuleId && String(mod.id) === String(preselectedModuleId)) {
-                            option.selected = true;
-                        }
-                        
-                        moduleSelect.appendChild(option);
-                    });
-                    moduleSelect.disabled = false;
-                    
-                    // Mettre à jour la valeur si un module est pré-sélectionné
-                    triggerBesoinUpdate();
-                } else {
-                    const option = document.createElement('option');
-                    option.value = "";
-                    option.textContent = "Aucun module disponible pour ce projet";
-                    moduleSelect.appendChild(option);
-                    moduleSelect.disabled = true;
-                    besoinInput.value = '';
-                }
-            }
+                removeItem(index) {
+                    if (this.items.length > 1) {
+                        this.items.splice(index, 1);
+                    }
+                },
 
-            // Écouteur changement projet
-            projectSelect.addEventListener('change', function () {
-                updateModulesOptions(this.value);
-            });
+                onProjectChange() {
+                    const proj = this.projects.find(p => String(p.id) === String(this.selectedProjectId));
+                    if (proj && proj.modules) {
+                        this.availableModules = proj.modules;
+                    } else {
+                        this.availableModules = [];
+                    }
+                    this.selectedModuleId = '';
+                    this.besoinFinancier = 0;
+                },
 
-            // Écouteur changement module -> auto-remplissage du besoin financier
-            moduleSelect.addEventListener('change', function () {
-                triggerBesoinUpdate();
-            });
-
-            if (projectSelect.value) {
-                updateModulesOptions(projectSelect.value, selectedModuleId);
-            }
-
-            // 2. Status & Prestataire Section Toggle
-            const statusSelect = document.getElementById('status');
-            const sectionPrestataire = document.getElementById('section_prestataire');
-            const selectUser = document.getElementById('user_id');
-
-            function togglePrestataireSection() {
-                if (statusSelect.value === 'Attribué') {
-                    sectionPrestataire.style.opacity = '1';
-                    sectionPrestataire.style.pointerEvents = 'auto';
-                    selectUser.disabled = false;
-                } else {
-                    sectionPrestataire.style.opacity = '0.5';
-                    sectionPrestataire.style.pointerEvents = 'none';
-                    selectUser.disabled = true;
-                }
-            }
-
-            statusSelect.addEventListener('change', togglePrestataireSection);
-            togglePrestataireSection();
-
-            // 3. Dynamic Rows for Material Needs Table
-            const containerMat = document.getElementById('besoins-container');
-            const addBtnMat = document.getElementById('add-row');
-
-            function reindexBesoins() {
-                const rows = containerMat.querySelectorAll('.besoin-row');
-                rows.forEach((row, index) => {
-                    const desInput = row.querySelector('input[name*="[designation]"]');
-                    const qtyInput = row.querySelector('input[name*="[quantite]"]');
-                    if (desInput) desInput.name = `besoins_materiels[${index}][designation]`;
-                    if (qtyInput) qtyInput.name = `besoins_materiels[${index}][quantite]`;
-                });
-            }
-
-            addBtnMat.addEventListener('click', function () {
-                const rowIdx = containerMat.querySelectorAll('.besoin-row').length;
-                const tr = document.createElement('tr');
-                tr.className = 'besoin-row';
-                tr.innerHTML = `
-                    <td class="px-4 py-3">
-                        <input type="text" name="besoins_materiels[${rowIdx}][designation]" required placeholder="Ex: Imprimante multifonction" class="w-full text-xs rounded-lg border-gray-300 focus:border-cyan-700 focus:ring-cyan-700">
-                    </td>
-                    <td class="px-4 py-3">
-                        <input type="number" name="besoins_materiels[${rowIdx}][quantite]" required min="1" value="1" class="w-full text-xs rounded-lg border-gray-300 focus:border-cyan-700 focus:ring-cyan-700">
-                    </td>
-                    <td class="px-4 py-3 text-center">
-                        <button type="button" class="remove-row text-red-500 hover:text-red-700 p-1">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                        </button>
-                    </td>
-                `;
-                containerMat.appendChild(tr);
-            });
-
-            containerMat.addEventListener('click', function (e) {
-                if (e.target.closest('.remove-row')) {
-                    const rows = containerMat.querySelectorAll('.besoin-row');
-                    if (rows.length > 1) {
-                        e.target.closest('.besoin-row').remove();
-                        reindexBesoins();
+                onModuleChange() {
+                    const mod = this.availableModules.find(m => String(m.id) === String(this.selectedModuleId));
+                    if (mod) {
+                        this.besoinFinancier = mod.besoin_financier || 0;
+                    } else {
+                        this.besoinFinancier = 0;
                     }
                 }
-            });
-        });
+            };
+        }
     </script>
 </x-app-layout>

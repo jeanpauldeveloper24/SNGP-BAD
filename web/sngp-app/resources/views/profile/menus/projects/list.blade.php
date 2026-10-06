@@ -16,7 +16,7 @@
                 
                 @if(Auth::user()->hasRole('ugp'))
                     <div>
-                        <a href="{{ route('menus.projects.form') }}" class="inline-flex items-center justify-center rounded-md border border-transparent bg-emerald-600 px-4 py-2 text-sm font-bold text-white shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition uppercase tracking-wider">
+                        <a href="{{ route('projects.create') }}" class="inline-flex items-center justify-center rounded-md border border-transparent bg-emerald-600 px-4 py-2 text-sm font-bold text-white shadow-sm hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition uppercase tracking-wider">
                             ➕ Initialiser un Projet
                         </a>
                     </div>
@@ -114,7 +114,7 @@
                                 </span>
                                 
                                 {{-- ROUTE CORRIGÉE ICI : Appelle maintenant la méthode GET du formulaire --}}
-                                <a href="{{ route('menus.projects.edit', $project->id) }}" class="inline-flex items-center font-bold text-cyan-700 hover:text-cyan-800 transition group">
+                                <a href="{{ route('projects.edit', $project->id) }}" class="inline-flex items-center font-bold text-cyan-700 hover:text-cyan-800 transition group">
                                     Consulter les détails 
                                     <span class="ml-1 transform group-hover:translate-x-1 transition-transform">→</span>
                                 </a>

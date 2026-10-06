@@ -13,87 +13,77 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Illuminate\Validation\Rules\Password;
-
 class RegisteredUserController extends Controller
 {
     /**
-     * Display the registration view.
+     * Affiche la vue d'inscription.
      */
-    public function create(): View
+    public function create(): View|RedirectResponse
     {
+        $adminRole = Role::where('name', 'administrateur_systeme')->first();
+        $ordonnateurRole = Role::where('name', 'ordonnateur')->first();
+
+        $adminCount = $adminRole ? User::where('role_id', $adminRole->id)->count() : 0;
+        $ordonnateurCount = $ordonnateurRole ? User::where('role_id', $ordonnateurRole->id)->count() : 0;
+
+        // Si les deux quotas sont totalement saturés, redirection vers la page de connexion
+        if ($adminCount >= 2 && $ordonnateurCount >= 1) {
+            return redirect()->route('login')->with('error', 'L\'inscription publique est fermée. Quotas maximaux atteints.');
+        }
+
         return view('auth.register');
     }
 
     /**
-     * Handle an incoming registration request.
-     *
-     * @throws \Illuminate\Validation\ValidationException
+     * Traite l'inscription publique (Haute Direction / Admin).
      */
     public function store(Request $request): RedirectResponse
     {
-        // 1. Validation de base des champs du formulaire
         $request->validate([
-    'name' => ['required', 'string', 'max:255'],
-    'email' => [
-        'required', 
-        'string', 
-        'lowercase', 
-        'max:255', 
-        'regex:/^.+@.+\..+$/', 
-        'unique:users,email' // <-- Ici, on cible directement la table "users"
-    ],
-    'phone' => ['required', 'string', 'max:20'],
-    'role_id' => ['required', 'integer'],
-    'password' => ['required', 'confirmed', Password::defaults()],
-]);
+            'name'     => ['required', 'string', 'max:255'],
+            'email'    => ['required', 'string', 'email', 'max:255', 'unique:users'],
+            'phone'    => ['required', 'string', 'max:20'],
+            'role_id'  => ['required', 'exists:roles,id'],
+            'password' => ['required', 'confirmed', Password::defaults()], // Correction ici
+            'photo'    => ['nullable', 'image', 'max:5120'], // Max 5MB
+        ]);
 
-        // 2. Récupération du rôle ciblé pour vérification
         $role = Role::findOrFail($request->role_id);
 
-        // Security Check 1 : Sécurité au niveau du serveur (Anti-bypass par modification de l'HTML)
-        if (!in_array($role->name, ['administrateur_systeme', 'ordonnateur'])) {
+        // Vérification stricte des quotas avant création
+        if ($role->name === 'ordonnateur' && User::where('role_id', $role->id)->count() >= 1) {
             throw ValidationException::withMessages([
-                'role_id' => 'Action non autorisée. Seuls les Administrateurs et les Ordonnateurs peuvent s\'inscrire.',
+                'role_id' => 'Le quota maximal d\'Ordonnateur (1) pour cette plateforme a été atteint.',
             ]);
         }
 
-        // Security Check 2 : Limite stricte à MAX 1 Ordonnateur dans tout le système
-        if ($role->name === 'ordonnateur') {
-            $ordonnateurCount = User::where('role_id', $role->id)->count();
-            if ($ordonnateurCount >= 1) {
-                throw ValidationException::withMessages([
-                    'role_id' => 'Le quota maximal d\'Ordonnateur (1) pour cette plateforme a été atteint. Veuillez contacter la direction.',
-                ]);
-            }
+        if ($role->name === 'administrateur_systeme' && User::where('role_id', $role->id)->count() >= 2) {
+            throw ValidationException::withMessages([
+                'role_id' => 'Le quota maximal d\'Administrateurs Système (2) a été atteint.',
+            ]);
         }
 
-        // Security Check 3 : Limite stricte à MAX 2 Administrateurs dans tout le système
-        if ($role->name === 'administrateur_systeme') {
-            $adminCount = User::where('role_id', $role->id)->count();
-            if ($adminCount >= 2) {
-                throw ValidationException::withMessages([
-                    'role_id' => 'Le quota maximal d\'Administrateurs Système (2) a été atteint. Inscription bloquée.',
-                ]);
-            }
+        $photoBase64 = null;
+
+        if ($request->hasFile('photo') && $request->file('photo')->isValid()) {
+            $file = $request->file('photo');
+            $photoBase64 = 'data:' . $file->getMimeType() . ';base64,' . base64_encode(file_get_contents($file->getRealPath()));
         }
 
-        // 3. Création de l'utilisateur si tous les feux sont au vert
         $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'phone' => $request->phone,
-            'role_id' => $request->role_id,
-            'password' => Hash::make($request->password), // Utilise le helper bcrypt natif
-            'status' => 'Actif', // Compte actif par défaut à l'inscription
-            'photo' => null, // Sera mis à jour plus tard par l'utilisateur (Base64)
-            'created_by' => null, // Auto-inscription donc pas de créateur parent
-            'last_connection' => now(),
+            'name'     => $request->name,
+            'email'    => $request->email,
+            'phone'    => $request->phone,
+            'role_id'  => $request->role_id,
+            'password' => Hash::make($request->password),
+            'photo'    => $photoBase64,
+            'status'   => 'Actif',
         ]);
 
         event(new Registered($user));
 
         Auth::login($user);
 
-        return redirect(route('dashboard', absolute: false));
+        return redirect('/dashboard');
     }
 }

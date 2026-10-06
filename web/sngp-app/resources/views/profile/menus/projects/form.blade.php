@@ -1,422 +1,315 @@
 <x-app-layout>
-<div class="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-4xl mx-auto">
-        
-        <div class="mb-8 flex items-center justify-between border-b border-gray-200 pb-5">
-            <div>
-                {{-- TITRE DYNAMIQUE --}}
-                <h2 class="text-3xl font-bold tracking-tight text-gray-900">
-                    {{ isset($project) ? 'Détails & Modification du Projet' : 'Initialiser un Nouveau Projet' }}
-                </h2>
-                <p class="mt-2 text-sm text-gray-600">Espace réservé aux Unités de Gestion de Projet (UGP) pour l'ouverture, le suivi et l'édition des enveloppes budgétaires.</p>
-            </div>
-            <div class="hidden sm:block">
-                <span class="inline-flex items-center rounded-md bg-cyan-50 px-3 py-2 text-sm font-semibold text-cyan-700 ring-1 ring-inset ring-cyan-700/10 uppercase tracking-wider">
-                    Rôle : UGP
-                </span>
-            </div>
-        </div>
-
-        @if ($errors->any())
-            <div class="mb-6 rounded-md bg-red-50 p-4 border-l-4 border-red-600">
-                <div class="flex">
-                    <div class="flex-shrink-0">
-                        <span class="text-red-600 font-bold">⚠️</span>
-                    </div>
-                    <div class="ml-3">
-                        <h3 class="text-sm font-medium text-red-800">Certains champs contiennent des erreurs :</h3>
-                        <ul role="list" class="mt-2 list-disc pl-5 text-sm text-red-700 space-y-1">
-                            @foreach ($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
+    <div class="py-6 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-5xl mx-auto space-y-8">
+            
+            {{-- Entête du Formulaire --}}
+            <div class="border-b border-gray-200 pb-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold tracking-tight text-gray-900">
+                        {{ isset($project) && $project->exists ? 'Édition du Projet : ' . $project->code : 'Nouveau Projet d\'Investissement' }}
+                    </h2>
+                    <p class="mt-1 text-xs text-gray-600">
+                        {{ isset($project) && $project->exists ? 'Modifier les paramètres et la structure du projet.' : 'Renseignez les informations générales. Si le code est laissé vide, il sera automatiquement généré.' }}
+                    </p>
+                </div>
+                <div>
+                    <a href="{{ route('profile.menus.projects.list') }}" class="inline-flex items-center text-xs font-semibold text-gray-600 hover:text-gray-900">
+                        ← Retour à la liste
+                    </a>
                 </div>
             </div>
-        @endif
 
-        {{-- FORMULAIRE DYNAMIQUE (POST/STORE ou PUT/UPDATE) --}}
-        @if(isset($project))
-            <form action="{{ route('menus.projects.update', $project->id) }}" method="POST" class="space-y-8 bg-white p-8 rounded-xl shadow-sm border border-gray-100">
+            {{-- Formulaire unique pour Création ou Édition --}}
+            <form action="{{ isset($project) && $project->exists ? route('projects.update', $project->id) : route('projects.store') }}" method="POST" class="space-y-6">
                 @csrf
-                @method('PUT')
-        @else
-            <form action="{{ route('menus.projects.store') }}" method="POST" class="space-y-8 bg-white p-8 rounded-xl shadow-sm border border-gray-100">
-                @csrf
-        @endif
+                @if(isset($project) && $project->exists)
+                    @method('PUT')
+                @endif
 
-            <div>
-                <div class="border-b border-gray-200 pb-4 mb-6">
-                    <h3 class="text-lg font-medium leading-6 text-cyan-700 flex items-center">
-                        <span class="mr-2">📁</span> Données Administratives & Budgétaires
+                {{-- SECTION 1 : Identification & Classification --}}
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-6">
+                    <h3 class="text-sm font-bold text-gray-800 uppercase tracking-wider border-b pb-2 flex items-center gap-2">
+                        <span>📌</span> 1. Identification & Classification du Projet
                     </h3>
-                </div>
 
-                <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
-                    
-                    
-{{-- SELECTION VILLE POUR NOUVEAU CODE --}}
-<div class="sm:col-span-2">
-    <label for="ville" class="block text-sm font-semibold text-gray-700">Ville du Projet</label>
-    <select id="ville" name="ville" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 sm:text-sm">
-        <option value="">-- Choisir la ville --</option>
-        
-        @foreach(config('villes') as $code => $nom)
-            <option value="{{ $code }}" {{ old('ville', $project->ville ?? '') == $code ? 'selected' : '' }}>
-                {{ $nom }} ({{ $code }})
-            </option>
-        @endforeach
-
-    </select>
-</div>
-
-                    <div class="sm:col-span-4">
-                        <label for="code" class="block text-sm font-semibold text-gray-700">Code Unique du Projet</label>
-                        <input type="text" name="code" id="code" value="{{ old('code', $project->code ?? '') }}" placeholder="ex: PRJ-2026-ABJ-0001" 
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 sm:text-sm" required>
-                    </div>
-
-                    <div class="sm:col-span-6">
-                        <label for="nom" class="block text-sm font-semibold text-gray-700">Nom / Intitulé Officiel</label>
-                        <input type="text" name="nom" id="nom" value="{{ old('nom', $project->nom ?? '') }}" placeholder="ex: Projet d'Appui au..." 
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 sm:text-sm" required>
-                    </div>
-
-                    {{-- BLOC CONVERTISSEUR DE DEVISES DYNAMIQUE --}}
-                    <div class="sm:col-span-3">
-                        <label for="budget_initial" class="block text-sm font-semibold text-gray-700">Montant de l'Enveloppe Globale</label>
-                        <input type="number" name="budget_initial" id="budget_initial" value="{{ old('budget_initial', $project->budget_initial ?? '') }}" min="0" step="0.01" placeholder="ex: 24500000" 
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 sm:text-sm" required>
-                    </div>
-
-                    <div class="sm:col-span-3">
-                        <label for="budget_devise" class="block text-sm font-semibold text-gray-700">Devise Principale</label>
-                        <select name="budget_devise" id="budget_devise" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 sm:text-sm">
-                            <option value="XOF" {{ old('budget_devise', $project->budget_devise ?? '') == 'XOF' ? 'selected' : '' }}>XOF (FCFA)</option>
-                            <option value="USD" {{ old('budget_devise', $project->budget_devise ?? '') == 'USD' ? 'selected' : '' }}>USD ($)</option>
-                            <option value="EUR" {{ old('budget_devise', $project->budget_devise ?? '') == 'EUR' ? 'selected' : '' }}>EUR (€)</option>
-                        </select>
-                    </div>
-
-                    <div class="sm:col-span-3">
-                        <label for="budget_equivalent" class="block text-sm font-semibold text-gray-700">Équivalent estimé</label>
-                        <input type="number" name="budget_equivalent" id="budget_equivalent" value="{{ old('budget_equivalent', $project->budget_equivalent ?? '') }}" min="0" step="0.01" placeholder="Montant converti" 
-                            class="mt-1 block w-full rounded-md border-gray-300 bg-gray-50 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 sm:text-sm">
-                    </div>
-
-                    <div class="sm:col-span-3">
-                        <label for="devise_cible" class="block text-sm font-semibold text-gray-700">Devise de Conversion</label>
-                        <select name="devise_cible" id="devise_cible" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 sm:text-sm">
-                            <option value="USD" {{ old('devise_cible', $project->devise_cible ?? '') == 'USD' ? 'selected' : '' }}>USD ($)</option>
-                            <option value="XOF" {{ old('devise_cible', $project->devise_cible ?? '') == 'XOF' ? 'selected' : '' }}>XOF (FCFA)</option>
-                            <option value="EUR" {{ old('devise_cible', $project->devise_cible ?? '') == 'EUR' ? 'selected' : '' }}>EUR (€)</option>
-                        </select>
-                    </div>
-
-                    {{-- INDICATEUR DU TAUX DE CHANGE API --}}
-                    <div class="sm:col-span-6 bg-cyan-50/50 p-3 rounded-lg border border-cyan-100 flex items-center justify-between text-xs text-cyan-800">
-                        <div class="flex items-center space-x-2">
-                            <span class="font-bold">💱 Taux Live :</span>
-                            <span id="rate-display">Chargement du taux de change...</span>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        
+                        {{-- Code Projet (Personnalisable ou Automatique) --}}
+                        <div>
+                            <label for="code" class="block text-xs font-semibold text-gray-700 uppercase">
+                                Code du Projet 
+                                <span class="text-gray-400 font-normal">(Laisser vide pour génération auto)</span>
+                            </label>
+                            <input type="text" 
+                                   name="code" 
+                                   id="code" 
+                                   value="{{ old('code', $project->code ?? '') }}" 
+                                   placeholder="Ex: PROJ-BAD-001 ou laissé vide..." 
+                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 text-xs font-mono font-bold text-cyan-900">
+                            @error('code') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                         </div>
-                        <div id="rate-loader" class="hidden animate-spin rounded-full h-4 w-4 border-2 border-cyan-700 border-t-transparent"></div>
-                    </div>
 
-                    <div class="sm:col-span-3">
-                        <label for="pourcentage_bailleur" class="block text-sm font-semibold text-gray-700">Part du Bailleur (%)</label>
-                        <input type="number" name="pourcentage_bailleur" id="pourcentage_bailleur" value="{{ old('pourcentage_bailleur', $project->pourcentage_bailleur ?? '100') }}" min="0" max="100" placeholder="ex: 80" 
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 sm:text-sm" required>
-                    </div>
+                        {{-- Nom du Projet --}}
+                        <div>
+                            <label for="nom" class="block text-xs font-semibold text-gray-700 uppercase">
+                                Intitulé du Projet <span class="text-red-500">*</span>
+                            </label>
+                            <input type="text" 
+                                   name="nom" 
+                                   id="nom" 
+                                   value="{{ old('nom', $project->nom ?? '') }}" 
+                                   required 
+                                   placeholder="Ex: Projet d'extension du réseau électrique" 
+                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 text-xs">
+                            @error('nom') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                        </div>
 
-                    <div class="sm:col-span-3">
-                        <label for="pourcentage_etat" class="block text-sm font-semibold text-gray-700">Contrepartie État (%)</label>
-                        <input type="number" name="pourcentage_etat" id="pourcentage_etat" value="{{ old('pourcentage_etat', $project->pourcentage_etat ?? '0') }}" min="0" max="100" placeholder="ex: 20" 
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 sm:text-sm" required>
-                    </div>
+                        {{-- Secteur d'Activité --}}
+                        <div>
+                            <label for="secteur_activite" class="block text-xs font-semibold text-gray-700 uppercase">
+                                Secteur d'Activité <span class="text-red-500">*</span>
+                            </label>
+                            <select name="secteur_activite" id="secteur_activite" class="mt-1 block w-full text-xs rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700" required>
+                                <option value="" disabled {{ old('secteur_activite', $project->secteur_activite ?? '') == '' ? 'selected' : '' }}>-- Sélectionner un secteur --</option>
+                                <option value="btp" {{ old('secteur_activite', $project->secteur_activite ?? '') == 'btp' ? 'selected' : '' }}>🚧 1. Bâtiment & Travaux Publics (BTP)</option>
+                                <option value="sante" {{ old('secteur_activite', $project->secteur_activite ?? '') == 'sante' ? 'selected' : '' }}>🏥 2. Santé publique</option>
+                                <option value="education" {{ old('secteur_activite', $project->secteur_activite ?? '') == 'education' ? 'selected' : '' }}>🎓 3. Éducation & Formation</option>
+                                <option value="energie" {{ old('secteur_activite', $project->secteur_activite ?? '') == 'energie' ? 'selected' : '' }}>⚡ 4. Énergie, Eau & Assainissement</option>
+                                <option value="tic" {{ old('secteur_activite', $project->secteur_activite ?? '') == 'tic' ? 'selected' : '' }}>💻 5. TIC & Numérique</option>
+                                <option value="agriculture" {{ old('secteur_activite', $project->secteur_activite ?? '') == 'agriculture' ? 'selected' : '' }}>🚜 6. Agriculture & Halieutique</option>
+                                <option value="transport" {{ old('secteur_activite', $project->secteur_activite ?? '') == 'transport' ? 'selected' : '' }}>🚗 7. Transports & Sécurité</option>
+                            </select>
+                            @error('secteur_activite') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                        </div>
 
-                    <div class="sm:col-span-6">
-                        <label for="description" class="block text-sm font-semibold text-gray-700">Description et Objectifs Stratégiques</label>
-                        <textarea name="description" id="description" rows="3" placeholder="Présentation succincte du projet..." 
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 sm:text-sm">{{ old('description', $project->description ?? '') }}</textarea>
-                    </div>
+                        {{-- Catégorie --}}
+                        <div>
+                            <label for="categorie" class="block text-xs font-semibold text-gray-700 uppercase">
+                                Catégorie <span class="text-red-500">*</span>
+                            </label>
+                            <select name="categorie" id="categorie" class="mt-1 block w-full text-xs rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700" required>
+                                <option value="" disabled {{ old('categorie', $project->categorie ?? '') == '' ? 'selected' : '' }}>-- Sélectionner une catégorie --</option>
+                                <option value="travaux" {{ old('categorie', $project->categorie ?? '') == 'travaux' ? 'selected' : '' }}>Travaux (TRV)</option>
+                                <option value="fournitures" {{ old('categorie', $project->categorie ?? '') == 'fournitures' ? 'selected' : '' }}>Fournitures (FRN)</option>
+                                <option value="services_courants" {{ old('categorie', $project->categorie ?? '') == 'services_courants' ? 'selected' : '' }}>Services courants (SVC)</option>
+                                <option value="prestations_intellectuelles" {{ old('categorie', $project->categorie ?? '') == 'prestations_intellectuelles' ? 'selected' : '' }}>Prestations intellectuelles (INT)</option>
+                            </select>
+                            @error('categorie') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                        </div>
 
-                    <div class="sm:col-span-3">
-                        <label for="start_date" class="block text-sm font-semibold text-gray-700">Date de Début du projet</label>
-                        <input type="date" name="start_date" id="start_date" value="{{ old('start_date', isset($project->start_date) ? \Carbon\Carbon::parse($project->start_date)->format('Y-m-d') : '') }}" 
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 sm:text-sm" required>
-                    </div>
+                        {{-- Description --}}
+                        <div class="md:col-span-2">
+                            <label for="description" class="block text-xs font-semibold text-gray-700 uppercase">Description du projet</label>
+                            <textarea name="description" id="description" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 text-xs" placeholder="Objectifs et portée globale du projet...">{{ old('description', $project->description ?? '') }}</textarea>
+                        </div>
 
-                    <div class="sm:col-span-3">
-                        <label for="end_date" class="block text-sm font-semibold text-gray-700">Date de fin de Projet</label>
-                        <input type="date" name="end_date" id="end_date" value="{{ old('end_date', isset($project->end_date) ? \Carbon\Carbon::parse($project->end_date)->format('Y-m-d') : '') }}" 
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 sm:text-sm" required>
                     </div>
                 </div>
-            </div>
 
-            <div class="pt-6">
-                <div class="border-b border-gray-200 pb-4 mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                    <h3 class="text-lg font-medium leading-6 text-cyan-700 flex items-center">
-                        <span class="mr-2">🧩</span> Définition des Composantes (Modules)
+                {{-- SECTION 2 : Localisation Administrative --}}
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-6">
+                    <h3 class="text-sm font-bold text-gray-800 uppercase tracking-wider border-b pb-2 flex items-center gap-2">
+                        <span>🗺️</span> 2. Localisation Administrative Principale
                     </h3>
-                    <button type="button" id="btn-add-module" class="mt-2 sm:mt-0 inline-flex items-center text-xs font-bold uppercase tracking-wider text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg border border-emerald-200 transition">
-                        ➕ Ajouter une composante
-                    </button>
-                </div>
 
-                <div id="modules-container" class="space-y-4">
-                    
-                    {{-- AFFICHAGE DES COMPOSANTES EXISTANTES SI ÉDITION --}}
-                    @if(isset($project) && $project->modules->count() > 0)
-                        @foreach($project->modules as $index => $module)
-                            <div class="module-card p-5 bg-gray-50 rounded-xl border border-gray-200 relative" data-index="{{ $index }}">
-                                <div class="absolute top-4 right-4 text-xs font-bold text-gray-400 uppercase tracking-wider class-module-badge">
-                                    Composante #{{ $index + 1 }}
-                                </div>
-                                
-                                <div class="grid grid-cols-1 gap-y-4 gap-x-4 sm:grid-cols-6">
-                                    <input type="hidden" name="modules[{{ $index }}][number]" value="{{ $module->number }}">
-
-                                    <div class="sm:col-span-6">
-                                        <label class="block text-xs font-semibold text-gray-600 uppercase">Intitulé des travaux ou de la prestation</label>
-                                        <input type="text" name="modules[{{ $index }}][description]" value="{{ old('modules.'.$index.'.description', $module->description) }}" placeholder="ex: Travaux de génie civil" 
-                                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 text-sm" required>
-                                    </div>
-
-                                    <div class="sm:col-span-4">
-                                        <label class="block text-xs font-semibold text-gray-600 uppercase">Besoin Financier (Dans la devise du projet)</label>
-                                        <input type="number" name="modules[{{ $index }}][besoin_financier]" value="{{ old('modules.'.$index.'.besoin_financier', $module->besoin_financier) }}" min="0" step="0.01" placeholder="Besoin financier du module" 
-                                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 text-sm" required>
-                                    </div>
-
-                                    <div class="sm:col-span-2">
-                                        <label class="block text-xs font-semibold text-gray-600 uppercase">Durée d'exécution</label>
-                                        <input type="text" name="modules[{{ $index }}][duree]" value="{{ old('modules.'.$index.'.duree', $module->duree) }}" placeholder="ex: 8 mois" 
-                                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 text-sm" required>
-                                    </div>
-                                </div>
-                                <button type="button" class="mt-3 text-xs text-red-600 hover:text-red-800 font-semibold uppercase tracking-wider flex items-center btn-remove-module">
-                                    ✕ Supprimer cette composante
-                                </button>
-                            </div>
-                        @endforeach
-                    @else
-                        {{-- COMPOSANTE PAR DÉFAUT SI NOUVEAU PROJET --}}
-                        <div class="module-card p-5 bg-gray-50 rounded-xl border border-gray-200 relative" data-index="0">
-                            <div class="absolute top-4 right-4 text-xs font-bold text-gray-400 uppercase tracking-wider class-module-badge">
-                                Composante #1
-                            </div>
-                            
-                            <div class="grid grid-cols-1 gap-y-4 gap-x-4 sm:grid-cols-6">
-                                <input type="hidden" name="modules[0][number]" value="1">
-
-                                <div class="sm:col-span-6">
-                                    <label class="block text-xs font-semibold text-gray-600 uppercase">Intitulé des travaux ou de la prestation</label>
-                                    <input type="text" name="modules[0][description]" placeholder="ex: Travaux de génie civil et aménagement" 
-                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 text-sm" required>
-                                </div>
-
-                                <div class="sm:col-span-4">
-                                    <label class="block text-xs font-semibold text-gray-600 uppercase">Besoin Financier (Dans la devise du projet)</label>
-                                    <input type="number" name="modules[0][besoin_financier]" min="0" step="0.01" placeholder="Besoin financier du module" 
-                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 text-sm" required>
-                                </div>
-
-                                <div class="sm:col-span-2">
-                                    <label class="block text-xs font-semibold text-gray-600 uppercase">Durée d'exécution</label>
-                                    <input type="text" name="modules[0][duree]" placeholder="ex: 8 mois" 
-                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 text-sm" required>
-                                </div>
-                            </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        
+                        {{-- Région --}}
+                        <div>
+                            <label for="region" class="block text-xs font-semibold text-gray-700 uppercase">Région <span class="text-red-500">*</span></label>
+                            <input type="text" name="region" id="region" value="{{ old('region', $project->region ?? '') }}" required placeholder="Ex: Poro" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 text-xs">
+                            @error('region') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                         </div>
-                    @endif
 
-                </div>
-            </div>
+                        {{-- Département --}}
+                        <div>
+                            <label for="departement" class="block text-xs font-semibold text-gray-700 uppercase">Département</label>
+                            <input type="text" name="departement" id="departement" value="{{ old('departement', $project->departement ?? '') }}" placeholder="Ex: Korhogo" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 text-xs">
+                            @error('departement') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                        </div>
 
-            <div class="pt-5 border-t border-gray-200 flex justify-end space-x-3">
-                <a href="{{ route('profile.menus.projects.list') }}" class="rounded-md border border-gray-300 bg-white py-2 px-4 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none transition">
-                    Retour au portefeuille
-                </a>
-                <button type="submit" class="inline-flex justify-center rounded-md border border-transparent bg-emerald-600 py-2 px-5 text-sm font-bold text-white shadow-sm hover:bg-emerald-700 focus:outline-none transition uppercase tracking-wider">
-                    {{ isset($project) ? 'Mettre à jour le projet' : 'Enregistrer le projet' }}
-                </button>
-            </div>
-        </form>
+                        {{-- Commune --}}
+                        <div>
+                            <label for="commune" class="block text-xs font-semibold text-gray-700 uppercase">Commune <span class="text-red-500">*</span></label>
+                            <input type="text" name="commune" id="commune" value="{{ old('commune', $project->commune ?? '') }}" required placeholder="Ex: Korhogo Ville" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 text-xs">
+                            @error('commune') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                        </div>
 
-    </div>
-</div>
+                        {{-- Ville / Agglomération --}}
+                        <div>
+                            <label for="ville" class="block text-xs font-semibold text-gray-700 uppercase">Ville / Agglomération</label>
+                            <input type="text" name="ville" id="ville" value="{{ old('ville', $project->ville ?? '') }}" placeholder="Ex: Korhogo" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 text-xs">
+                            @error('ville') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                        </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    // --- 1. CODE PROJET AUTO (PRJ-YYYY-VILLE-XXXX) ---
-    const selectVille = document.getElementById('ville');
-    const inputCode = document.getElementById('code');
-    const currentYear = new Date().getFullYear();
-
-    if (selectVille && inputCode) {
-        selectVille.addEventListener('change', function () {
-            const villeCode = this.value;
-            // Pré-remplissage dynamique de la structure
-            inputCode.value = villeCode ? `PRJ-${currentYear}-${villeCode}-0001` : '';
-        });
-    }
-
-    // --- 2. CONVERTISSEUR STYLE GOOGLE CURRENCY CONVERTER ---
-    const apiKey = "{{ config('services.exchangerate.api_key', 'aa78a1e90740b0912e729963') }}"; // Clé ExchangeRate-API via Laravel Config
-    
-    const inputPrincipal = document.getElementById('budget_initial');
-    const selectDevisePrincipal = document.getElementById('budget_devise');
-    
-    const inputEquivalent = document.getElementById('budget_equivalent');
-    const selectDeviseCible = document.getElementById('devise_cible');
-    
-    const rateDisplay = document.getElementById('rate-display');
-    const rateLoader = document.getElementById('rate-loader');
-
-    let currentRates = {};
-
-    // Récupération des taux via l'endpoint Standard /latest/
-    async function updateRates() {
-        const baseCurrency = selectDevisePrincipal.value;
-        if (rateLoader) rateLoader.classList.remove('hidden');
-
-        try {
-            const response = await fetch(`https://v6.exchangerate-api.com/v6/${apiKey}/latest/${baseCurrency}`);
-            const data = await response.json();
-
-            // Gestion de réponse selon la documentation officielle
-            if (data.result === 'success') {
-                currentRates = data.conversion_rates;
-                
-                // Si la devise cible est identique à la devise principale, on bascule
-                if (selectDeviseCible.value === baseCurrency) {
-                    selectDeviseCible.value = (baseCurrency === 'XOF') ? 'USD' : 'XOF';
-                }
-
-                calculateFromPrincipal();
-            } else {
-                console.error('Erreur ExchangeRate-API:', data['error-type']);
-                if (rateDisplay) rateDisplay.textContent = `Erreur API: ${data['error-type']}`;
-            }
-        } catch (error) {
-            console.error('Erreur réseau / fetch:', error);
-            if (rateDisplay) rateDisplay.textContent = 'Impossible de contacter le service de taux.';
-        } finally {
-            if (rateLoader) rateLoader.classList.add('hidden');
-        }
-    }
-
-    // Sens 1 : Champ Principal -> Champ Équivalent
-    function calculateFromPrincipal() {
-        const amount = parseFloat(inputPrincipal.value);
-        const targetCurrency = selectDeviseCible.value;
-        const rate = currentRates[targetCurrency];
-
-        if (!isNaN(amount) && rate) {
-            inputEquivalent.value = (amount * rate).toFixed(2);
-            if (rateDisplay) {
-                rateDisplay.textContent = `1 ${selectDevisePrincipal.value} = ${rate} ${targetCurrency}`;
-            }
-        } else {
-            inputEquivalent.value = '';
-        }
-    }
-
-    // Sens 2 : Champ Équivalent -> Champ Principal (Google Currency Style)
-    function calculateFromEquivalent() {
-        const targetAmount = parseFloat(inputEquivalent.value);
-        const targetCurrency = selectDeviseCible.value;
-        const rate = currentRates[targetCurrency];
-
-        if (!isNaN(targetAmount) && rate && rate > 0) {
-            inputPrincipal.value = (targetAmount / rate).toFixed(2);
-        } else {
-            inputPrincipal.value = '';
-        }
-    }
-
-    // ÉCOUTEURS D'ÉVÉNEMENTS MONÉTAIRES
-    if (inputPrincipal && inputEquivalent) {
-        inputPrincipal.addEventListener('input', calculateFromPrincipal);
-        inputEquivalent.addEventListener('input', calculateFromEquivalent);
-
-        selectDevisePrincipal.addEventListener('change', updateRates);
-        selectDeviseCible.addEventListener('change', calculateFromPrincipal);
-
-        // Initialisation initiale au chargement de la page
-        updateRates();
-    }
-
-    // --- 3. GESTION DES COMPOSANTES / MODULES DYNAMIQUES ---
-    const btnAddModule = document.getElementById('btn-add-module');
-    const modulesContainer = document.getElementById('modules-container');
-
-    if (btnAddModule && modulesContainer) {
-        btnAddModule.addEventListener('click', function() {
-            const currentModules = modulesContainer.getElementsByClassName('module-card');
-            const nextIndex = currentModules.length;
-            const displayNum = nextIndex + 1;
-
-            const html = `
-                <div class="module-card p-5 bg-gray-50 rounded-xl border border-gray-200 relative transition duration-150 ease-in-out" data-index="${nextIndex}">
-                    <div class="absolute top-4 right-4 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                        Composante #${displayNum}
                     </div>
-                    
-                    <div class="grid grid-cols-1 gap-y-4 gap-x-4 sm:grid-cols-6">
-                        <input type="hidden" name="modules[${nextIndex}][number]" value="${displayNum}">
-
-                        <div class="sm:col-span-6">
-                            <label class="block text-xs font-semibold text-gray-600 uppercase">Intitulé des travaux ou de la prestation</label>
-                            <input type="text" name="modules[${nextIndex}][description]" placeholder="ex: Description de la composante..." 
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 text-sm" required>
-                        </div>
-
-                        <div class="sm:col-span-4">
-                            <label class="block text-xs font-semibold text-gray-600 uppercase">Besoin Financier (Dans la devise du projet)</label>
-                            <input type="number" name="modules[${nextIndex}][besoin_financier]" min="0" step="0.01" placeholder="Besoin financier" 
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 text-sm" required>
-                        </div>
-
-                        <div class="sm:col-span-2">
-                            <label class="block text-xs font-semibold text-gray-600 uppercase">Durée d'exécution</label>
-                            <input type="text" name="modules[${nextIndex}][duree]" placeholder="ex: 12 mois" 
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 text-sm" required>
-                        </div>
-                    </div>
-                    
-                    <button type="button" class="mt-3 text-xs text-red-600 hover:text-red-800 font-semibold uppercase tracking-wider flex items-center btn-remove-module">
-                        ✕ Supprimer cette composante
-                    </button>
                 </div>
-            `;
 
-            modulesContainer.insertAdjacentHTML('beforeend', html);
-        });
-
-        modulesContainer.addEventListener('click', function(e) {
-            if (e.target && e.target.classList.contains('btn-remove-module')) {
-                const card = e.target.closest('.module-card');
-                card.remove();
-                
-                const currentModules = modulesContainer.getElementsByClassName('module-card');
-                Array.from(currentModules).forEach((module, idx) => {
-                    const currentNum = idx + 1;
-                    module.setAttribute('data-index', idx);
-                    module.querySelector('div.absolute').innerText = `Composante #${currentNum}`;
-                    module.querySelector('input[type="hidden"]').value = currentNum;
+                {{-- SECTION 3 : Cadrage Financier & Calendrier --}}
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-6" x-data="{
+                    budget: {{ old('budget_initial', $project->budget_initial ?? 0) }},
+                    currency: '{{ old('budget_devise', $project->budget_devise ?? 'XOF') }}',
+                    exchangeRate: {{ old('taux_change', $project->taux_change ?? 1) }},
+                    pctBailleur: {{ old('pourcentage_bailleur', $project->pourcentage_bailleur ?? 80) }},
+                    pctEtat: {{ old('pourcentage_etat', $project->pourcentage_etat ?? 20) }},
                     
-                    module.querySelectorAll('input, select').forEach(input => {
-                        let name = input.getAttribute('name');
-                        if(name) {
-                            input.setAttribute('name', name.replace(/modules\[\d+\]/, `modules[${idx}]`));
+                    // Taux par défaut vers le XOF (FCFA)
+                    rates: {
+                        'XOF': 1,
+                        'USD': {{ $usdToXof ?? 605.20 }},
+                        'EUR': 655.957
+                    },
+
+                    updateCurrency() {
+                        this.exchangeRate = this.rates[this.currency] || 1;
+                    },
+
+                    get counterValueRaw() {
+                        return (parseFloat(this.budget) || 0) * (parseFloat(this.exchangeRate) || 1);
+                    },
+
+                    get counterValue() {
+                        return this.counterValueRaw.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    },
+
+                    get finBailleur() {
+                        return (this.counterValueRaw * ((parseFloat(this.pctBailleur) || 0) / 100)).toFixed(2);
+                    },
+
+                    get finEtat() {
+                        return (this.counterValueRaw * ((parseFloat(this.pctEtat) || 0) / 100)).toFixed(2);
+                    }
+                }">
+                    <h3 class="text-sm font-bold text-gray-800 uppercase tracking-wider border-b pb-2 flex items-center gap-2">
+                        <span>💰</span> 3. Enveloppe Budgétaire & Calendrier
+                    </h3>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        
+                        {{-- Budget Initial --}}
+                        <div>
+                            <label for="budget_initial" class="block text-xs font-semibold text-gray-700 uppercase">Budget Initial <span class="text-red-500">*</span></label>
+                            <input type="number" step="any" name="budget_initial" id="budget_initial" x-model="budget" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 text-xs font-bold">
+                            @error('budget_initial') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                        </div>
+
+                        {{-- Devise --}}
+                        <div>
+                            <label for="budget_devise" class="block text-xs font-semibold text-gray-700 uppercase">Devise <span class="text-red-500">*</span></label>
+                            <select name="budget_devise" id="budget_devise" x-model="currency" x-on:change="updateCurrency()" class="mt-1 block w-full text-xs rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700" required>
+                                <option value="XOF">XOF (FCFA)</option>
+                                <option value="EUR">EUR (€)</option>
+                                <option value="USD">USD ($)</option>
+                            </select>
+                            @error('budget_devise') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                        </div>
+
+                        {{-- Taux de Change --}}
+                        <div>
+                            <label for="taux_change" class="block text-xs font-semibold text-gray-700 uppercase">Taux de Change (vers XOF)</label>
+                            <input type="number" step="any" name="taux_change" id="taux_change" x-model="exchangeRate" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 text-xs">
+                            @error('taux_change') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                        </div>
+
+                        {{-- Pourcentage Bailleur --}}
+                        <div>
+                            <label for="pourcentage_bailleur" class="block text-xs font-semibold text-gray-700 uppercase">% Part Bailleur</label>
+                            <input type="number" step="0.01" name="pourcentage_bailleur" id="pourcentage_bailleur" x-model="pctBailleur" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 text-xs">
+                            <input type="hidden" name="financement_bailleur" :value="finBailleur">
+                        </div>
+
+                        {{-- Pourcentage État --}}
+                        <div>
+                            <label for="pourcentage_etat" class="block text-xs font-semibold text-gray-700 uppercase">% Part État</label>
+                            <input type="number" step="0.01" name="pourcentage_etat" id="pourcentage_etat" x-model="pctEtat" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 text-xs">
+                            <input type="hidden" name="financement_etat" :value="finEtat">
+                        </div>
+
+                        {{-- Contre-valeur Totale en XOF --}}
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-700 uppercase">Contre-valeur Totale (XOF)</label>
+                            <div class="mt-1 px-3 py-2 rounded-md border border-gray-200 bg-gray-50 text-emerald-700 font-bold text-xs" x-text="counterValue + ' XOF'">
+                                0,00 XOF
+                            </div>
+                            <input type="hidden" name="budget_value" :value="counterValueRaw">
+                        </div>
+
+                        {{-- Date Démarrage --}}
+                        <div>
+                            <label for="start_date" class="block text-xs font-semibold text-gray-700 uppercase">Date de début</label>
+                            <input type="date" name="start_date" id="start_date" value="{{ old('start_date', isset($project->start_date) && $project->start_date ? $project->start_date->format('Y-m-d') : '') }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 text-xs">
+                        </div>
+
+                        {{-- Date Fin --}}
+                        <div>
+                            <label for="end_date" class="block text-xs font-semibold text-gray-700 uppercase">Date de fin prévisionnelle</label>
+                            <input type="date" name="end_date" id="end_date" value="{{ old('end_date', isset($project->end_date) && $project->end_date ? $project->end_date->format('Y-m-d') : '') }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 text-xs">
+                        </div>
+
+                    </div>
+                </div>
+
+                {{-- SECTION 4 : Composantes / Modules --}}
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4" x-data="{
+                    modules: {{ json_encode(old('modules', isset($project) && $project->modules->isNotEmpty() ?$project->modules : [['number' => 1, 'description' => '', 'besoin_financier' => 0, 'duree' => '12 mois']])) }},
+                    addModule() {
+                        this.modules.push({ number: this.modules.length + 1, description: '', besoin_financier: 0, duree: '12 mois' });
+                    },
+                    removeModule(index) {
+                        if (this.modules.length > 1) {
+                            this.modules.splice(index, 1);
                         }
-                    });
-                });
-            }
-        });
-    }
-});
-</script>
+                    }
+                }">
+                    <div class="flex items-center justify-between border-b pb-2">
+                        <h3 class="text-sm font-bold text-gray-800 uppercase tracking-wider flex items-center gap-2">
+                            <span>⚙️</span> 4. Composantes / Modules
+                        </h3>
+                        <button type="button" @click="addModule()" class="text-xs bg-cyan-50 text-cyan-700 border border-cyan-200 px-3 py-1.5 rounded-md hover:bg-cyan-100 font-bold uppercase">
+                            + Ajouter une composante
+                        </button>
+                    </div>
+
+                    <div class="space-y-3">
+                        <template x-for="(module, index) in modules" :key="index">
+                            <div class="flex flex-col md:flex-row items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                <div class="w-full md:w-16">
+                                    <label class="block text-[10px] font-bold uppercase text-gray-500">N°</label>
+                                    <input type="text" :name="`modules[${index}][number]`" x-model="module.number" required class="w-full text-xs rounded border-gray-300">
+                                </div>
+                                <div class="w-full md:flex-1">
+                                    <label class="block text-[10px] font-bold uppercase text-gray-500">Description de la composante</label>
+                                    <input type="text" :name="`modules[${index}][description]`" x-model="module.description" required placeholder="Ex: Travaux de génie civil" class="w-full text-xs rounded border-gray-300">
+                                </div>
+                                <div class="w-full md:w-36">
+                                    <label class="block text-[10px] font-bold uppercase text-gray-500">Besoin Financier</label>
+                                    <input type="number" step="any" :name="`modules[${index}][besoin_financier]`" x-model="module.besoin_financier" required class="w-full text-xs rounded border-gray-300">
+                                </div>
+                                <div class="w-full md:w-28">
+                                    <label class="block text-[10px] font-bold uppercase text-gray-500">Durée</label>
+                                    <input type="text" :name="`modules[${index}][duree]`" x-model="module.duree" required class="w-full text-xs rounded border-gray-300">
+                                </div>
+                                <div class="pt-3">
+                                    <button type="button" @click="removeModule(index)" class="text-red-500 hover:text-red-700 p-1">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                {{-- Boutons d'action --}}
+                <div class="flex items-center justify-end space-x-4 pt-4">
+                    <a href="{{ route('profile.menus.projects.list') }}" class="rounded-md border border-gray-300 bg-white py-2 px-4 text-xs font-bold text-gray-700 hover:bg-gray-50 uppercase">
+                        Annuler
+                    </a>
+                    <button type="submit" class="rounded-md bg-cyan-700 py-2.5 px-6 text-xs font-bold text-white hover:bg-cyan-800 uppercase shadow-sm">
+                        {{ isset($project) &&$project->exists ? 'Mettre à jour le projet' : 'Enregistrer le Projet' }}
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
 </x-app-layout>
