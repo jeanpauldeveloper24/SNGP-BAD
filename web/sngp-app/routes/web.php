@@ -2,8 +2,8 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
-use App\Http\Controllers\MarketController; 
-use App\Http\Controllers\UserController;   
+use App\Http\Controllers\MarketController;
+use App\Http\Controllers\UserController;
 use App\Http\Controllers\PaiementController;
 use Illuminate\Support\Facades\Route;
 use App\Models\Project;
@@ -51,9 +51,10 @@ Route::middleware('auth')->group(function () {
 
     // 0. TABLEAU DE BORD (Sécurisé)
     Route::get('/dashboard', function () {
-        $projects = Project::all(); 
+        $projects = \App\Models\Project::all();
+
         return view('dashboard', compact('projects'));
-    })->name('dashboard');
+    })->middleware(['auth', 'verified'])->name('dashboard');
 
     // 1. GESTION DU PROFIL PERSONNEL
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -78,7 +79,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/comptabilite/gestion', [ProjectController::class, 'comptabiliteGestion'])->name('profile.menus.comptabilite.comptabilite_gestion');
     Route::get('/comptabilite/monetaire', [ProjectController::class, 'comptabiliteMonetaire'])->name('profile.menus.comptabilite.comptabilite_monetaire');
 
-    Route::get('/rapports', function () { return view('profile.menus.rapports'); })->name('menus.rapports');
+    Route::get('/rapports', function () {
+        return view('profile.menus.rapports');
+    })->name('menus.rapports');
     Route::get('/paiements', [PaiementController::class, 'index'])->name('menus.paiements');
 
     // 4. GESTION DU PORTEFEUILLE DES PROJETS
@@ -96,7 +99,7 @@ Route::middleware('auth')->group(function () {
 
     // Traitement de la mise à jour (C'est la route manquante !)
     Route::put('/projets/{id}', [ProjectController::class, 'update'])->name('projects.update');
-    
+
     // ========================================================================
     // GESTION INTERNE DES MARCHÉS & PASSATION (PRIVÉ)
     // ========================================================================
@@ -114,16 +117,16 @@ Route::middleware('auth')->group(function () {
     })->name('menus.candidatures.liste');
 
     Route::post('/candidatures/{id}/arbitrer', function (Request $request, $id) {
-    $candidature = Candidature::findOrFail($id);
+        $candidature = Candidature::findOrFail($id);
 
-    // Exemple de logique d'arbitrage
-    $candidature->update([
-        'status' => $request->input('status'), // 'Accepté' ou 'Rejeté'
-        'motif_statut' => $request->input('motif_statut'),
-    ]);
+        // Exemple de logique d'arbitrage
+        $candidature->update([
+            'status' => $request->input('status'), // 'Accepté' ou 'Rejeté'
+            'motif_statut' => $request->input('motif_statut'),
+        ]);
 
-    return back()->with('success', 'La candidature a été arbitrée avec succès.');
-})->name('menus.candidatures.arbitrer');
+        return back()->with('success', 'La candidature a été arbitrée avec succès.');
+    })->name('menus.candidatures.arbitrer');
 
     // 6. SYSTÈME & LOGS D'AUDIT
     Route::get('/audit', function () {
@@ -136,14 +139,17 @@ Route::middleware('auth')->group(function () {
     })->name('menus.audit');
 
     // 7. MESSAGERIE & NOTIFICATIONS
-    Route::get('/notifications', function () { return view('profile.menus.notifications'); })->name('menus.notifications');
-    Route::get('/messagerie', function () { return view('profile.menus.messages'); })->name('menus.messages');
+    Route::get('/notifications', function () {
+        return view('profile.menus.notifications');
+    })->name('menus.notifications');
+    Route::get('/messagerie', function () {
+        return view('profile.menus.messages');
+    })->name('menus.messages');
 
     // 8. SOUS-MENUS
     Route::get('/menus/sous-menus/historique', function () {
         return view('profile.menus.sous-menus.historique-complet');
     })->name('menus.sous-menus.historique');
-
 });
 
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';

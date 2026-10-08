@@ -593,4 +593,28 @@ class ProjectController extends Controller
             return back()->withInput()->with('error', 'Erreur lors de l\'enregistrement : ' . $e->getMessage());
         }
     }
+
+    /**
+     * Accesseur : Calcule le budget en FCFA selon la devise et le taux du projet
+     */
+    public function getBudgetInFcfaAttribute(): float
+    {
+        $devise = strtoupper($this->attributes['budget_devise'] ?? 'XOF');
+        $initial = (float) ($this->attributes['budget_initial'] ?? 0);
+        $value = (float) ($this->attributes['budget_value'] ?? 0);
+        $taux = (float) ($this->attributes['taux_change'] ?? 1);
+
+        // Si déjà en FCFA/XOF
+        if (in_array($devise, ['FCFA', 'XOF'])) {
+            return $initial;
+        }
+
+        // Si la valeur convertie en FCFA est déjà stockée dans budget_value
+        if ($value > 0) {
+            return $value;
+        }
+
+        // Conversion selon le taux enregistré
+        return $initial * $taux;
+    }
 }

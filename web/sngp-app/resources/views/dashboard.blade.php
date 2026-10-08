@@ -14,7 +14,7 @@
                 </div>
             </div>
             <p class="text-2xl font-bold text-[#1B4F72]">
-                {{ number_format($projects->sum('budget_alloue'), 0, ',', ' ') }} FCFA
+                {{ number_format($projects->sum('budget_in_fcfa'), 0, ',', ' ') }} FCFA
             </p>
             <div class="mt-4 flex items-center text-xs text-gray-400">
                 <span class="text-green-500 font-bold mr-1">↑ Portefeuille BAD</span>
