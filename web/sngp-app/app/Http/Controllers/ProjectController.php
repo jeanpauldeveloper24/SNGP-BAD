@@ -40,7 +40,7 @@ class ProjectController extends Controller
     /**
      * Affichage de la console d'arbitrage budgétaire réel avec Taux de change API
      */
-    public function budget()
+private function getExchangeRates()
     {
         // 1. Récupérer le taux USD -> XOF avec mise en cache de 6 heures
         $usdToXof = Cache::remember('usd_to_xof_rate', now()->addHours(6), function () {
@@ -58,19 +58,46 @@ class ProjectController extends Controller
             return 605.20;
         });
 
-        // 2. Charger les projets avec leurs paiements pour éviter le problème de requêtes N+1
+        // Taux EUR -> XOF (Parité fixe institutionnelle zone CFA)
+        $eurToXof = 655.957;
+
+        return [
+            'usdToXof' => $usdToXof,
+            'eurToXof' => $eurToXof,
+            'exchangeRateUsd' => 1 / $usdToXof,
+            'exchangeRateEur' => 1 / $eurToXof,
+        ];
+    }
+
+    public function dashboard()
+    {
+        // Récupération des taux via la méthode privée
+        $rates = $this->getExchangeRates();
+
+        // Gestion des rôles pour les projets de l'UGP ou vue globale
+        $user = auth()->user();
+        if ($user && $user->hasRole('ugp')) {
+            $projects = Project::with(['paiements'])->where('user_id', $user->id)->orderBy('code', 'asc')->get();
+        } else {
+            $projects = Project::with(['paiements'])->orderBy('code', 'asc')->get();
+        }
+
+        return view('dashboard', array_merge(compact('projects'), $rates));
+    }
+
+    public function budget()
+    {
+        // Récupération des taux via la même méthode privée
+        $rates = $this->getExchangeRates();
+
         $projects = Project::with(['paiements'])->orderBy('code', 'asc')->get();
 
-        // 3. Récupérer l'historique des réallocations de manière sécurisée
         $revisions = collect();
         if (Schema::hasTable('budget_revisions')) {
-            // Si ton modèle BudgetRevision existe, tu pourras décommenter la ligne ci-dessous :
-            // $revisions = \App\Models\BudgetRevision::with(['sourceProject', 'targetProject'])->latest()->get();
             $revisions = DB::table('budget_revisions')->get();
         }
 
-        // 4. Passer toutes les variables indispensables à la vue unique
-        return view('profile.menus.budget', compact('projects', 'revisions', 'usdToXof'));
+        return view('profile.menus.budget', array_merge(compact('projects', 'revisions'), $rates));
     }
 
     /**
@@ -371,14 +398,6 @@ class ProjectController extends Controller
     public function passation()
     {
         return view('profile.menus.passation');
-    }
-
-    public function dashboard()
-    {
-        // On ajoute 'modules.markets' dans le with()
-        $projects = Project::with(['modules.markets'])->get();
-
-        return view('profile.menus.projects.list', compact('projects'));
     }
 
     /**

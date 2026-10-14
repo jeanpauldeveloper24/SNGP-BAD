@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('name');
             $table->string('email')->unique();
             $table->string('password'); // Haché
+            $table->string('locale')->default('fr'); // <-- Ajout de la langue par défaut (fr)
             $table->string('phone')->nullable();
             $table->longText('photo')->nullable(); // Stockage de l'image en chaîne Base64
             
