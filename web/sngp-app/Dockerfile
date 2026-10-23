@@ -1,4 +1,4 @@
-FROM php:8.4-apache
+FROM php:8.4.12-apache
 
 # 1. Installation des dépendances système + Node.js (nécessaire pour Vite)
 RUN apt-get update && apt-get install -y \

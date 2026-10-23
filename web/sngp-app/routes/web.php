@@ -112,7 +112,7 @@ Route::middleware('auth')->group(function () {
 
     // 5. REGISTRE DES CANDIDATURES
     Route::get('/liste-candidatures', function () {
-        $candidatures = Candidature::latest()->get();
+        $candidatures = Candidature::with('market')->latest()->get();
         return view('profile.menus.candidatures.liste', compact('candidatures'));
     })->name('menus.candidatures.liste');
 
