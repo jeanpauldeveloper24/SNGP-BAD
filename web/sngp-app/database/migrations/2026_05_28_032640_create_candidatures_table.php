@@ -20,6 +20,7 @@ return new class extends Migration
             // Identité du candidat
             $table->string('nom_candidat');
             $table->string('numero_registre_commerce');
+            $table->string('email_candidat')->nullable()->comment('Email officiel de l\'entreprise pour les notifications');
             
             // --- Documents Administratifs Réglementaires (Chemins des fichiers PDF) ---
             $table->string('file_rccm')->nullable()->comment('Registre de Commerce et du Crédit Mobilier');
@@ -29,13 +30,13 @@ return new class extends Migration
             $table->string('file_cnps')->nullable()->comment('Attestation CNPS à jour');
             $table->string('file_attestation_bancaire')->nullable()->comment('Attestation d\'ouverture de compte bancaire');
             
-            // --- Propositions Technique et Financière ---
-            $table->text('proposition_technique'); // Stockage JSON des réponses aux besoins
+            // --- Proposition Financière ---
             $table->decimal('proposition_financiere', 15, 2); // Montant total proposé
             
-            // --- Statut et Évaluation ---
-            $table->enum('status', ['En attente', 'Accepté', 'Rejeté'])->default('En attente');
-            $table->text('motif_statut')->nullable(); // Raison ou détails de la décision d'évaluation
+            // --- Statuts et Évaluation (Double niveau de statut) ---
+            $table->enum('statut_candidature', ['accepté', 'refusé'])->default('accepté')->comment('Phase d\'admissibilité administrative et technique');
+            $table->enum('statut_marche', ['en attente', 'tributaire', 'rejeté'])->default('en attente')->comment('Phase d\'arbitrage final pour l\'attribution du marché');
+            $table->text('motif_statut')->nullable(); // Raison ou détails de la décision d'évaluation ou du rejet
             
             $table->timestamps();
         });

@@ -22,7 +22,7 @@ return new class extends Migration
             
             $table->string('methode_passation')->nullable();
             $table->string('etape')->default('EXPRESSION_BESOIN');
-            $table->string('status')->default('Non attribué');
+$table->enum('status', ['Non attribué', 'En cours d’évaluation', 'Attribué'])->default('Non attribué');
             $table->decimal('besoin_financier', 15, 2)->default(0);
             $table->string('devise', 10)->default('USD');
             

@@ -1,198 +1,269 @@
 <x-app-layout>
-    <div class="py-12">
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+            {{ __('Gestion des Candidatures') }}
+        </h2>
+    </x-slot>
+
+    <div class="py-12" x-data="candidatureModal()">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-
-            <div class="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
-                <div class="max-w-7xl mx-auto">
-
-                    <!-- En-tête -->
-                    <div class="mb-8 border-b border-gray-200 pb-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+                <div class="p-6 text-gray-900">
+                    
+                    <!-- En-tête de section -->
+                    <div class="flex justify-between items-center mb-6">
                         <div>
-                            <h2 class="text-3xl font-bold tracking-tight text-gray-900">Registre des Candidatures</h2>
-                            <p class="mt-2 text-sm text-gray-600">
-                                Espace d'arbitrage et d'évaluation des offres techniques et financières par le Comité d'Analyse.
-                            </p>
+                            <h3 class="text-lg font-bold text-gray-800 mb-1">Liste des Candidatures</h3>
+                            <p class="text-sm text-gray-500 mb-0">Consultez et gérez les soumissions pour ce marché.</p>
                         </div>
-                        <div class="flex items-center space-x-3">
-                            <span class="inline-flex items-center rounded-md bg-cyan-50 px-3 py-2 text-xs font-bold text-cyan-700 ring-1 ring-inset ring-cyan-700/10 uppercase tracking-wider">
-                                Supervision UGP
-                            </span>
-                        </div>
+                        <span class="px-3 py-1 bg-indigo-100 text-indigo-700 text-sm font-semibold rounded-full">
+                            Total : {{ $candidatures->count() }}
+                        </span>
                     </div>
 
-                    <!-- Notification Flash -->
-                    @if(session('success'))
-                    <div class="mb-6 p-4 bg-emerald-50 border-l-4 border-emerald-600 rounded-r-xl shadow-sm text-xs text-emerald-800 font-medium">
-                        {{ session('success') }}
-                    </div>
-                    @endif
-
-                    <!-- Conteneur Principal / Tableau -->
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                        @if($candidatures->isEmpty())
-                        <div class="p-12 text-center">
-                            <div class="text-4xl mb-3">📥</div>
-                            <p class="text-sm font-medium text-gray-500">Aucune candidature n'a encore été déposée sur le portail.</p>
-                        </div>
-                        @else
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full divide-y divide-gray-200 text-left text-xs">
-                                <thead class="bg-gray-50 text-gray-400 uppercase font-semibold tracking-wider">
-                                    <tr>
-                                        <th class="px-6 py-4">Soumissionnaire / RCCM</th>
-                                        <th class="px-6 py-4">Marché Visé & Enveloppe</th>
-                                        <th class="px-6 py-4">Offre Financière</th>
-                                        <th class="px-6 py-4">Statut Système</th>
-                                        <th class="px-6 py-4 text-right">Actions Decisionnelles</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-gray-100 font-medium text-gray-700">
-                                    @foreach($candidatures as $candidature)
-                                    <tr class="hover:bg-gray-50/80 transition">
-
-                                        <!-- Soumissionnaire -->
-                                        <td class="px-6 py-4">
-                                            <div class="font-bold text-gray-900 text-sm">{{ $candidature->nom_candidat }}</div>
-                                            <div class="text-[10px] font-mono text-gray-400 mt-0.5">{{ $candidature->numero_registre_commerce }}</div>
+                    <!-- Tableau des Candidatures -->
+                    <div class="overflow-x-auto border border-gray-200 rounded-lg">
+                        <table class="min-w-full divide-y divide-gray-200 text-left text-sm">
+                            <thead class="bg-gray-50 text-gray-700 uppercase font-semibold">
+                                <tr>
+                                    <th class="py-3 px-4">Candidat / Entreprise</th>
+                                    <th class="py-3 px-4">N° Registre (RCCM)</th>
+                                    <th class="py-3 px-4">Prop. Financière</th>
+                                    <th class="py-3 px-4">Statut Dossier</th>
+                                    <th class="py-3 px-4">Statut Marché</th>
+                                    <th class="py-3 px-4 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200 bg-white">
+                                @forelse($candidatures as $candidature)
+                                    <tr class="hover:bg-gray-50 transition-colors">
+                                        <td class="py-3 px-4">
+                                            <div class="font-semibold text-gray-900">{{ $candidature->nom_candidat }}</div>
+                                            <div class="text-xs text-gray-500">{{ $candidature->email_candidat }}</div>
                                         </td>
-
-                                        <!-- Marché Visé -->
-                                        <td class="px-6 py-4 max-w-xs">
-                                            <div class="truncate text-gray-950" title="{{ $candidature->market->objet ?? 'Marché inconnu' }}">
-                                                {{ $candidature->market->objet ?? 'Marché inconnu' }}
-                                            </div>
-                                            <div class="text-[10px] font-mono font-bold text-cyan-700 mt-0.5">
-                                                Max alloué : {{ number_format($candidature->market->besoin_financier_fcfa ?? 0, 0, ',', ' ') }} CFA
-                                                <span class="text-gray-400 font-normal">({{ number_format($candidature->market->besoin_financier, 0, ',', ' ') }} {{ $candidature->market->devise }})</span>
-                                            </div>
-                                        </td>
-
-                                        <!-- Offre Financière -->
-                                        <td class="px-6 py-4 font-mono font-bold text-sm">
-                                            {{ number_format($candidature->proposition_financiere, 0, ',', ' ') }} CFA
-                                        </td>
-
-                                        <!-- Statut -->
-                                        <td class="px-6 py-4">
-                                            @if($candidature->status === 'Rejeté Automatiquement')
-                                            <span class="inline-flex items-center rounded-md bg-red-50 px-2.5 py-1 text-xs font-bold text-red-700 ring-1 ring-inset ring-red-600/10">
-                                                🛑 Éliminé d'office
+                                        <td class="py-3 px-4">
+                                            <span class="px-2.5 py-1 bg-gray-100 text-gray-800 text-xs font-medium rounded border border-gray-300">
+                                                {{ $candidature->numero_registre_commerce }}
                                             </span>
-                                            @elseif($candidature->status === 'Accepté')
-                                            <span class="inline-flex items-center rounded-md bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 ring-1 ring-inset ring-emerald-600/10">
-                                                ✅ Validé / Attribué
+                                        </td>
+                                        <td class="py-3 px-4">
+                                            <span class="font-bold text-green-600">
+                                                {{ number_format($candidature->proposition_financiere, 0, ',', ' ') }} FCFA
                                             </span>
+                                        </td>
+                                        <td class="py-3 px-4">
+                                            @if($candidature->statut_candidature === 'accepté')
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                                    Accepté
+                                                </span>
                                             @else
-                                            <span class="inline-flex items-center rounded-md bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700 ring-1 ring-inset ring-amber-600/10 animate-pulse">
-                                                ⏳ En attente d'analyse
-                                            </span>
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                                    Refusé
+                                                </span>
                                             @endif
                                         </td>
-
-                                        <!-- Actions Decisionnelles (Modal Alpine.js) -->
-                                        <td class="px-6 py-4 text-right">
-                                            <div class="flex items-center justify-end space-x-2" x-data="{ openModal: false }">
-
-                                                @if($candidature->status === 'Rejeté Automatiquement')
-                                                <span class="text-[11px] text-red-500 italic font-normal max-w-xs block text-right" title="{{ $candidature->motif_statut }}">
-                                                    {{ Str::limit($candidature->motif_statut, 45) }}
-                                                </span>
-                                                @else
-                                                <button @click="openModal = true" class="rounded-lg bg-gray-900 hover:bg-gray-800 text-white px-3 py-1.5 font-bold transition uppercase tracking-wider text-[10px]">
-                                                    Évaluer l'offre →
-                                                </button>
-                                                @endif
-
-                                                <!-- Fenêtre Modale d'évaluation -->
-                                                <div x-show="openModal" class="fixed inset-0 z-50 overflow-y-auto" style="display: none;">
-                                                    <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
-
-                                                    <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-                                                        <div @click.away="openModal = false" class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-2xl">
-
-                                                            <div class="bg-gray-50 px-6 py-4 border-b border-gray-100 flex justify-between items-center">
-                                                                <h3 class="text-sm font-bold text-gray-900 uppercase">Analyse du dossier : {{ $candidature->nom_candidat }}</h3>
-                                                                <button @click="openModal = false" class="text-gray-400 hover:text-gray-600 font-bold">&times;</button>
-                                                            </div>
-
-                                                            <form action="{{ route('menus.candidatures.arbitrer', $candidature->id) }}" method="POST" class="p-6 space-y-4">
-                                                                @csrf
-
-                                                                <div>
-                                                                    <h4 class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Mémoire Technique du Soumissionnaire</h4>
-                                                                    <div class="bg-gray-50 p-3 rounded-xl border border-gray-200 text-gray-800 text-xs font-normal leading-relaxed max-h-60 overflow-y-auto">
-                                                                        @php
-                                                                        $items = is_string($candidature->proposition_technique)
-                                                                        ? json_decode($candidature->proposition_technique, true)
-                                                                        : $candidature->proposition_technique;
-                                                                        @endphp
-
-                                                                        @if(is_array($items) && count($items) > 0)
-                                                                        <table class="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg overflow-hidden bg-white">
-                                                                            <thead class="bg-gray-100 font-semibold text-gray-600 text-[11px] uppercase">
-                                                                                <tr>
-                                                                                    <th class="px-3 py-2 text-left">Désignation</th>
-                                                                                    <th class="px-3 py-2 text-right">Quantité</th>
-                                                                                </tr>
-                                                                            </thead>
-                                                                            <tbody class="divide-y divide-gray-100">
-                                                                                @foreach($items as $item)
-                                                                                <tr class="hover:bg-gray-50">
-                                                                                    <td class="px-3 py-2 text-gray-900 font-medium">{{ $item['designation'] ?? '-' }}</td>
-                                                                                    <td class="px-3 py-2 text-right font-bold text-indigo-600 font-mono">{{ $item['quantite'] ?? '-' }}</td>
-                                                                                </tr>
-                                                                                @endforeach
-                                                                            </tbody>
-                                                                        </table>
-                                                                        @else
-                                                                        <!-- Fallback au cas où ce n'est pas un JSON structuré -->
-                                                                        <p class="whitespace-pre-line text-gray-700">{{ $candidature->proposition_technique }}</p>
-                                                                        @endif
-                                                                    </div>
-                                                                </div>
-
-                                                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-gray-100">
-                                                                    <div class="text-left">
-                                                                        <label class="block text-[11px] font-semibold text-gray-700 uppercase">Sentence du Comité</label>
-                                                                        <select name="status" class="mt-1 block w-full rounded-lg border-gray-300 text-xs font-bold" required>
-                                                                            <option value="Accepté">Adjuger le marché (Accepter)</option>
-                                                                            <option value="Rejeté">Rejeter la candidature</option>
-                                                                        </select>
-                                                                    </div>
-
-                                                                    <div class="text-left">
-                                                                        <label class="block text-[11px] font-semibold text-gray-700 uppercase">Observations / Motif (Si rejet)</label>
-                                                                        <input type="text" name="motif_statut" placeholder="ex: Note technique insuffisante..." class="mt-1 block w-full rounded-lg border-gray-300 text-xs">
-                                                                    </div>
-                                                                </div>
-
-                                                                <div class="flex justify-end space-x-3 pt-4 border-t border-gray-100">
-                                                                    <button type="button" @click="openModal = false" class="rounded-lg border border-gray-300 bg-white py-2 px-4 font-bold text-gray-700 hover:bg-gray-50 uppercase tracking-wider text-[10px]">
-                                                                        Fermer
-                                                                    </button>
-                                                                    <button type="submit" class="rounded-lg bg-emerald-600 py-2 px-5 font-bold text-white hover:bg-emerald-700 uppercase tracking-wider text-[10px]">
-                                                                        Valider le Verdict
-                                                                    </button>
-                                                                </div>
-                                                            </form>
-
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                            </div>
+                                        <td class="py-3 px-4">
+                                            @if($candidature->statut_marche === 'tributaire')
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Tributaire</span>
+                                            @elseif($candidature->statut_marche === 'rejeté')
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Rejeté</span>
+                                            @else
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">En attente</span>
+                                            @endif
+                                        </td>
+                                        <td class="py-3 px-4 text-right">
+                                            <button type="button" 
+                                                    class="inline-flex items-center px-3 py-1.5 bg-indigo-50 border border-indigo-300 text-indigo-700 text-xs font-semibold rounded-md hover:bg-indigo-100 transition-colors"
+                                                    @click="openDetails({{ json_encode($candidature) }})">
+                                                Détails
+                                            </button>
                                         </td>
                                     </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-                        @endif
+                                @empty
+                                    <tr>
+                                        <td colspan="6" class="text-center py-8 text-gray-500">
+                                            Aucune candidature enregistrée pour ce marché.
+                                        </td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
                     </div>
 
                 </div>
             </div>
+        </div>
 
+        <!-- Fenêtre Modale Alpine.js -->
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" 
+             x-show="isOpen" 
+             x-cloak
+             style="display: none;">
+            
+            <div class="bg-white rounded-lg shadow-xl max-w-3xl w-full mx-4 overflow-hidden max-h-[90vh] flex flex-col"
+                 @click.away="isOpen = false">
+                
+                <!-- Modal Header -->
+                <div class="px-6 py-4 bg-gray-50 border-b flex justify-between items-center">
+                    <h3 class="font-bold text-gray-800 text-lg">
+                        Dossier de candidature : <span class="text-indigo-600" x-text="selectedCandidature?.nom_candidat"></span>
+                    </h3>
+                    <button type="button" class="text-gray-400 hover:text-gray-600 text-xl font-bold" @click="isOpen = false">&times;</button>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="p-6 overflow-y-auto flex-1" x-show="selectedCandidature">
+                    <!-- Informations Générales -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Email du Candidat</label>
+                            <div class="font-semibold text-gray-900" x-text="selectedCandidature?.email_candidat || 'N/A'"></div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Registre de Commerce (RCCM)</label>
+                            <div class="font-semibold text-gray-900" x-text="selectedCandidature?.numero_registre_commerce || 'N/A'"></div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Offre Financière</label>
+                            <div class="text-lg font-bold text-green-600">
+                                <span x-text="formatCurrency(selectedCandidature?.proposition_financiere)"></span> FCFA
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Statut & Evaluation</label>
+                            <div class="flex gap-2">
+                                <span class="px-2.5 py-0.5 rounded text-xs font-semibold text-white" 
+                                      :class="selectedCandidature?.statut_candidature === 'accepté' ? 'bg-green-600' : 'bg-red-600'"
+                                      x-text="selectedCandidature?.statut_candidature?.toUpperCase()"></span>
+                                <span class="px-2.5 py-0.5 rounded text-xs font-semibold bg-gray-500 text-white" x-text="'Marché : ' + selectedCandidature?.statut_marche"></span>
+                            </div>
+                        </div>
+                        <template x-if="selectedCandidature?.motif_statut">
+                            <div class="col-span-2">
+                                <div class="p-3 bg-blue-50 border border-blue-200 text-blue-800 rounded-md text-sm">
+                                    <strong>Motif / Note :</strong> <span x-text="selectedCandidature?.motif_statut"></span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+
+                    <hr class="my-4 border-gray-200">
+
+                    <!-- Documents & Pièces Jointes -->
+                    <h6 class="font-bold text-gray-800 mb-3">Documents Administratifs</h6>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mb-4">
+                        <template x-for="(label, key) in documentFields" :key="key">
+                            <div class="p-2 border border-gray-200 rounded flex justify-between items-center bg-gray-50">
+                                <span class="text-xs text-gray-700 truncate mr-2" x-text="label"></span>
+                                <template x-if="selectedCandidature && selectedCandidature[key]">
+                                    <a :href="'/storage/' + selectedCandidature[key]" 
+                                       target="_blank" 
+                                       class="px-2.5 py-1 bg-indigo-600 text-white text-xs font-semibold rounded hover:bg-indigo-700 transition-colors">
+                                        Voir
+                                    </a>
+                                </template>
+                                <template x-if="!selectedCandidature || !selectedCandidature[key]">
+                                    <span class="px-2 py-0.5 bg-gray-200 text-gray-500 text-xs rounded">Non fourni</span>
+                                </template>
+                            </div>
+                        </template>
+                    </div>
+
+                    <!-- Offre Technique -->
+                    <template x-if="selectedCandidature?.proposition_technique && selectedCandidature?.proposition_technique.length > 0">
+                        <div>
+                            <h6 class="font-bold text-gray-800 mb-3">Offre Technique</h6>
+                            <div class="overflow-x-auto border border-gray-200 rounded">
+                                <table class="min-w-full divide-y divide-gray-200 text-sm">
+                                    <thead class="bg-gray-50 text-gray-700 font-semibold">
+                                        <tr>
+                                            <th class="py-2 px-3 text-left">Désignation</th>
+                                            <th class="py-2 px-3 text-right">Quantité</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-200 bg-white">
+                                        <template x-for="(item, index) in parseJson(selectedCandidature?.proposition_technique)" :key="index">
+                                            <tr>
+                                                <td class="py-2 px-3 text-gray-800" x-text="item.designation"></td>
+                                                <td class="py-2 px-3 text-right font-semibold text-gray-900" x-text="item.quantite"></td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="px-6 py-3 bg-gray-50 border-t flex justify-between items-center">
+                    <div>
+                        <!-- Bouton conditionné au rôle Comité Technique -->
+                        @can('designate-tributaire')
+                            <template x-if="selectedCandidature && selectedCandidature.statut_candidature === 'accepté' && selectedCandidature.statut_marche === 'en attente'">
+                                <form :action="'/marches/candidatures/' + selectedCandidature.id + '/arbitrer'" method="POST" onsubmit="return confirm('Confirmez-vous la désignation de ce candidat comme tributaire du marché ?');">
+                                    @csrf
+                                    @method('PATCH')
+                                    
+                                    <input type="hidden" name="statut_candidature" value="accepté">
+                                    <input type="hidden" name="statut_marche" value="tributaire">
+                                    
+                                    <button type="submit" 
+                                            class="px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded shadow hover:bg-emerald-700 transition-colors inline-flex items-center gap-1.5">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                        Désigner comme Tributaire
+                                    </button>
+                                </form>
+                            </template>
+                        @endcan
+                    </div>
+
+                    <button type="button" 
+                            class="px-4 py-2 bg-gray-300 text-gray-700 text-xs font-semibold rounded hover:bg-gray-400 transition-colors" 
+                            @click="isOpen = false">
+                        Fermer
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
+
+    <!-- Script Alpine.js -->
+    <script>
+        function candidatureModal() {
+            return {
+                isOpen: false,
+                selectedCandidature: null,
+                documentFields: {
+                    'file_rccm': 'Registre de Commerce (RCCM)',
+                    'file_acte_constitution': 'Acte de Constitution',
+                    'file_dfe': 'Déclaration Fiscale d\'Existence (DFE)',
+                    'file_arf': 'Attestation de Régularité Fiscale (ARF)',
+                    'file_cnps': 'Attestation CNPS',
+                    'file_attestation_bancaire': 'Attestation Bancaire'
+                },
+                openDetails(candidature) {
+                    this.selectedCandidature = candidature;
+                    this.isOpen = true;
+                },
+                formatCurrency(amount) {
+                    if (!amount) return '0';
+                    return new Intl.NumberFormat('fr-FR').format(amount);
+                },
+                parseJson(data) {
+                    if (!data) return [];
+                    if (typeof data === 'string') {
+                        try {
+                            return JSON.parse(data);
+                        } catch (e) {
+                            return [];
+                        }
+                    }
+                    return data;
+                }
+            }
+        }
+    </script>
 </x-app-layout>

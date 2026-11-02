@@ -73,6 +73,11 @@ class RoleSeeder extends Seeder
                 'description' => 'Autorité de tutelle - Consultation des tableaux de bord analytiques et bilans',
                 'platform' => 'laravel_web'
             ],
+            [
+                'name' => 'comite_technique',
+                'description' => 'Membre du comité technique - Analyse, évaluation des candidatures et désignation des tributaires de marchés',
+                'platform' => 'laravel_web'
+            ],
         ];
 
         foreach ($roles as $role) {

@@ -12,6 +12,10 @@ services:
       AUTORUN_ENABLED: "false"
       NGINX_WEB_ROOT: "/var/www/html/public"
       PHP_OPCACHE_ENABLE: "0"
+      UPLOAD_MAX_FILESIZE: "64M"
+      POST_MAX_SIZE: "64M"
+      MEMORY_LIMIT: "256M"
+      NGINX_CLIENT_MAX_BODY_SIZE: "64M"
       DB_CONNECTION: mysql
       DB_HOST: mysql
       DB_PORT: 3306

@@ -14,6 +14,12 @@ return Application::configure(basePath: dirname(__DIR__))
         // Indique à Laravel de faire confiance au Reverse Proxy de Render
         $middleware->trustProxies(at: '*');
     })
+    ->withMiddleware(function (Middleware $middleware) {
+        // Exclure la route de soumission de la vérification CSRF pour Postman
+        $middleware->validateCsrfTokens(except: [
+            'opportunites/marche/*/postuler',
+        ]);
+    })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
     })->create();
