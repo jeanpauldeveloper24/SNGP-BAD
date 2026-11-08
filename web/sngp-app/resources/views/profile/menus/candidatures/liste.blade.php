@@ -1,269 +1,195 @@
 <x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Gestion des Candidatures') }}
-        </h2>
-    </x-slot>
+    <div class="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-7xl mx-auto">
 
-    <div class="py-12" x-data="candidatureModal()">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 text-gray-900">
-                    
-                    <!-- En-tête de section -->
-                    <div class="flex justify-between items-center mb-6">
-                        <div>
-                            <h3 class="text-lg font-bold text-gray-800 mb-1">Liste des Candidatures</h3>
-                            <p class="text-sm text-gray-500 mb-0">Consultez et gérez les soumissions pour ce marché.</p>
-                        </div>
-                        <span class="px-3 py-1 bg-indigo-100 text-indigo-700 text-sm font-semibold rounded-full">
-                            Total : {{ $candidatures->count() }}
-                        </span>
-                    </div>
+            <!-- En-tête de la page -->
+            <div class="mb-8 border-b border-gray-200 pb-5 flex flex-col md:flex-row md:items-center md:justify-between">
+                <div>
+                    <h2 class="text-3xl font-bold tracking-tight text-gray-900">
+                        Liste des Candidatures
+                    </h2>
+                    <p class="mt-2 text-sm text-gray-600">
+                        Suivi des soumissions d'entreprises et arbitrage des marchés publics.
+                    </p>
+                </div>
 
-                    <!-- Tableau des Candidatures -->
-                    <div class="overflow-x-auto border border-gray-200 rounded-lg">
-                        <table class="min-w-full divide-y divide-gray-200 text-left text-sm">
-                            <thead class="bg-gray-50 text-gray-700 uppercase font-semibold">
-                                <tr>
-                                    <th class="py-3 px-4">Candidat / Entreprise</th>
-                                    <th class="py-3 px-4">N° Registre (RCCM)</th>
-                                    <th class="py-3 px-4">Prop. Financière</th>
-                                    <th class="py-3 px-4">Statut Dossier</th>
-                                    <th class="py-3 px-4">Statut Marché</th>
-                                    <th class="py-3 px-4 text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-200 bg-white">
-                                @forelse($candidatures as $candidature)
-                                    <tr class="hover:bg-gray-50 transition-colors">
-                                        <td class="py-3 px-4">
-                                            <div class="font-semibold text-gray-900">{{ $candidature->nom_candidat }}</div>
-                                            <div class="text-xs text-gray-500">{{ $candidature->email_candidat }}</div>
-                                        </td>
-                                        <td class="py-3 px-4">
-                                            <span class="px-2.5 py-1 bg-gray-100 text-gray-800 text-xs font-medium rounded border border-gray-300">
-                                                {{ $candidature->numero_registre_commerce }}
-                                            </span>
-                                        </td>
-                                        <td class="py-3 px-4">
-                                            <span class="font-bold text-green-600">
-                                                {{ number_format($candidature->proposition_financiere, 0, ',', ' ') }} FCFA
-                                            </span>
-                                        </td>
-                                        <td class="py-3 px-4">
-                                            @if($candidature->statut_candidature === 'accepté')
-                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                                    Accepté
-                                                </span>
-                                            @else
-                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                                    Refusé
-                                                </span>
-                                            @endif
-                                        </td>
-                                        <td class="py-3 px-4">
-                                            @if($candidature->statut_marche === 'tributaire')
-                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Tributaire</span>
-                                            @elseif($candidature->statut_marche === 'rejeté')
-                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Rejeté</span>
-                                            @else
-                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">En attente</span>
-                                            @endif
-                                        </td>
-                                        <td class="py-3 px-4 text-right">
-                                            <button type="button" 
-                                                    class="inline-flex items-center px-3 py-1.5 bg-indigo-50 border border-indigo-300 text-indigo-700 text-xs font-semibold rounded-md hover:bg-indigo-100 transition-colors"
-                                                    @click="openDetails({{ json_encode($candidature) }})">
-                                                Détails
-                                            </button>
-                                        </td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="6" class="text-center py-8 text-gray-500">
-                                            Aucune candidature enregistrée pour ce marché.
-                                        </td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-
+                <!-- Badge indiquant le rôle connecté -->
+                <div class="mt-4 md:mt-0 flex items-center space-x-2">
+                    <span class="text-xs text-gray-500">Connecté en tant que :</span>
+                    <span class="px-3 py-1 bg-cyan-50 text-cyan-800 text-xs font-bold rounded-full border border-cyan-200">
+                        {{ Auth::user()->role->label ?? 'Utilisateur' }}
+                    </span>
                 </div>
             </div>
-        </div>
 
-        <!-- Fenêtre Modale Alpine.js -->
-        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" 
-             x-show="isOpen" 
-             x-cloak
-             style="display: none;">
-            
-            <div class="bg-white rounded-lg shadow-xl max-w-3xl w-full mx-4 overflow-hidden max-h-[90vh] flex flex-col"
-                 @click.away="isOpen = false">
-                
-                <!-- Modal Header -->
-                <div class="px-6 py-4 bg-gray-50 border-b flex justify-between items-center">
-                    <h3 class="font-bold text-gray-800 text-lg">
-                        Dossier de candidature : <span class="text-indigo-600" x-text="selectedCandidature?.nom_candidat"></span>
-                    </h3>
-                    <button type="button" class="text-gray-400 hover:text-gray-600 text-xl font-bold" @click="isOpen = false">&times;</button>
-                </div>
-
-                <!-- Modal Body -->
-                <div class="p-6 overflow-y-auto flex-1" x-show="selectedCandidature">
-                    <!-- Informations Générales -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <div>
-                            <label class="block text-xs font-medium text-gray-500 mb-1">Email du Candidat</label>
-                            <div class="font-semibold text-gray-900" x-text="selectedCandidature?.email_candidat || 'N/A'"></div>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-gray-500 mb-1">Registre de Commerce (RCCM)</label>
-                            <div class="font-semibold text-gray-900" x-text="selectedCandidature?.numero_registre_commerce || 'N/A'"></div>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-gray-500 mb-1">Offre Financière</label>
-                            <div class="text-lg font-bold text-green-600">
-                                <span x-text="formatCurrency(selectedCandidature?.proposition_financiere)"></span> FCFA
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-gray-500 mb-1">Statut & Evaluation</label>
-                            <div class="flex gap-2">
-                                <span class="px-2.5 py-0.5 rounded text-xs font-semibold text-white" 
-                                      :class="selectedCandidature?.statut_candidature === 'accepté' ? 'bg-green-600' : 'bg-red-600'"
-                                      x-text="selectedCandidature?.statut_candidature?.toUpperCase()"></span>
-                                <span class="px-2.5 py-0.5 rounded text-xs font-semibold bg-gray-500 text-white" x-text="'Marché : ' + selectedCandidature?.statut_marche"></span>
-                            </div>
-                        </div>
-                        <template x-if="selectedCandidature?.motif_statut">
-                            <div class="col-span-2">
-                                <div class="p-3 bg-blue-50 border border-blue-200 text-blue-800 rounded-md text-sm">
-                                    <strong>Motif / Note :</strong> <span x-text="selectedCandidature?.motif_statut"></span>
-                                </div>
-                            </div>
-                        </template>
-                    </div>
-
-                    <hr class="my-4 border-gray-200">
-
-                    <!-- Documents & Pièces Jointes -->
-                    <h6 class="font-bold text-gray-800 mb-3">Documents Administratifs</h6>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mb-4">
-                        <template x-for="(label, key) in documentFields" :key="key">
-                            <div class="p-2 border border-gray-200 rounded flex justify-between items-center bg-gray-50">
-                                <span class="text-xs text-gray-700 truncate mr-2" x-text="label"></span>
-                                <template x-if="selectedCandidature && selectedCandidature[key]">
-                                    <a :href="'/storage/' + selectedCandidature[key]" 
-                                       target="_blank" 
-                                       class="px-2.5 py-1 bg-indigo-600 text-white text-xs font-semibold rounded hover:bg-indigo-700 transition-colors">
-                                        Voir
-                                    </a>
-                                </template>
-                                <template x-if="!selectedCandidature || !selectedCandidature[key]">
-                                    <span class="px-2 py-0.5 bg-gray-200 text-gray-500 text-xs rounded">Non fourni</span>
-                                </template>
-                            </div>
-                        </template>
-                    </div>
-
-                    <!-- Offre Technique -->
-                    <template x-if="selectedCandidature?.proposition_technique && selectedCandidature?.proposition_technique.length > 0">
-                        <div>
-                            <h6 class="font-bold text-gray-800 mb-3">Offre Technique</h6>
-                            <div class="overflow-x-auto border border-gray-200 rounded">
-                                <table class="min-w-full divide-y divide-gray-200 text-sm">
-                                    <thead class="bg-gray-50 text-gray-700 font-semibold">
-                                        <tr>
-                                            <th class="py-2 px-3 text-left">Désignation</th>
-                                            <th class="py-2 px-3 text-right">Quantité</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="divide-y divide-gray-200 bg-white">
-                                        <template x-for="(item, index) in parseJson(selectedCandidature?.proposition_technique)" :key="index">
-                                            <tr>
-                                                <td class="py-2 px-3 text-gray-800" x-text="item.designation"></td>
-                                                <td class="py-2 px-3 text-right font-semibold text-gray-900" x-text="item.quantite"></td>
-                                            </tr>
-                                        </template>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </template>
-                </div>
-
-                <!-- Modal Footer -->
-                <div class="px-6 py-3 bg-gray-50 border-t flex justify-between items-center">
+            <!-- Tableau des candidatures -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="p-6 bg-gray-50 border-b border-gray-100 flex justify-between items-center">
                     <div>
-                        <!-- Bouton conditionné au rôle Comité Technique -->
-                        @can('designate-tributaire')
-                            <template x-if="selectedCandidature && selectedCandidature.statut_candidature === 'accepté' && selectedCandidature.statut_marche === 'en attente'">
-                                <form :action="'/marches/candidatures/' + selectedCandidature.id + '/arbitrer'" method="POST" onsubmit="return confirm('Confirmez-vous la désignation de ce candidat comme tributaire du marché ?');">
-                                    @csrf
-                                    @method('PATCH')
-                                    
-                                    <input type="hidden" name="statut_candidature" value="accepté">
-                                    <input type="hidden" name="statut_marche" value="tributaire">
-                                    
-                                    <button type="submit" 
-                                            class="px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded shadow hover:bg-emerald-700 transition-colors inline-flex items-center gap-1.5">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                                        </svg>
-                                        Désigner comme Tributaire
-                                    </button>
-                                </form>
-                            </template>
-                        @endcan
+                        <h3 class="text-lg font-bold text-[#1B4F72]">Dossiers soumis</h3>
+                        <p class="text-xs text-gray-500">Examen des offres techniques et financières des prestataires</p>
                     </div>
 
-                    <button type="button" 
-                            class="px-4 py-2 bg-gray-300 text-gray-700 text-xs font-semibold rounded hover:bg-gray-400 transition-colors" 
-                            @click="isOpen = false">
-                        Fermer
-                    </button>
+                    @if(Auth::user()->role->name === 'comite_technique')
+                    <span class="px-3 py-1 bg-amber-100 text-amber-800 text-xs font-semibold rounded-full border border-amber-200">
+                        Mode Arbitrage Activé
+                    </span>
+                    @else
+                    <span class="px-3 py-1 bg-gray-100 text-gray-700 text-xs font-semibold rounded-full border border-gray-200">
+                        Mode Consultation
+                    </span>
+                    @endif
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Candidat / Entreprise</th>
+                                <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Date de soumission</th>
+                                <th class="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Offre Financière</th>
+                                <th class="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Statut Marché</th>
+                                <th class="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200 text-sm">
+                            @forelse($candidatures as $candidature)
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
+                                    {{ $candidature->nom_candidat }} <br>
+                                    <span class="text-xs text-gray-500 font-normal">{{ $candidature->email-candidat }}</span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-gray-600">
+                                    {{ $candidature->created_at->format('d/m/Y H:i') }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-center font-bold text-gray-700">
+                                    {{ number_format($candidature->proposition_financiere ?? 0, 0, ',', ' ') }} FCFA
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-center">
+                                    @if($candidature->statut_marche === 'tributaire')
+                                    <span class="px-2.5 py-1 bg-green-100 text-green-800 text-xs font-bold rounded-md">
+                                        Attributaire
+                                    </span>
+                                    @elseif($candidature->statut_marche === 'rejeté')
+                                    <span class="px-2.5 py-1 bg-red-100 text-red-800 text-xs font-semibold rounded-md">
+                                        Rejeté
+                                    </span>
+                                    @else
+                                    <span class="px-2.5 py-1 bg-amber-50 text-amber-700 text-xs font-semibold rounded-md">
+                                        En attente
+                                    </span>
+                                    @endif
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+
+                                    {{-- 1. BOUTON DE CONSULTATION DU DOSSIER (Sécurisé avec l'opérateur nullsafe) --}}
+                                    <a href="{{ route('pages.candidature-form', $candidature->market?->id ?? $candidature->market_id) }}"
+                                        class="text-gray-600 hover:text-gray-900 bg-gray-100 px-3 py-1.5 rounded-lg transition text-xs">
+                                        Voir l'offre
+                                    </a>
+
+                                    {{-- 2. BOUTON / MODALE RÉSERVÉ AU COMITÉ TECHNIQUE --}}
+                                    @if(Auth::user()->role->name === 'comite_technique')
+                                    <button type="button"
+                                        onclick="openEvaluationModal('{{ $candidature->id }}', '{{ addslashes($candidature->company_name ?? $candidature->name) }}', '{{ $candidature->statut_candidature }}', '{{ $candidature->statut_marche }}', '{{ addslashes($candidature->motif_statut ?? '') }}')"
+                                        class="text-white bg-[#27AE60] hover:bg-green-700 px-3 py-1.5 rounded-lg transition text-xs font-bold shadow-sm">
+                                        Arbitrer / Évaluer
+                                    </button>
+                                    @endif
+
+                                </td>
+                            </tr>
+                            @empty
+                            <tr>
+                                <td colspan="5" class="px-6 py-8 text-center text-gray-500 text-sm">
+                                    Aucune candidature enregistrée pour le moment.
+                                </td>
+                            </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
                 </div>
             </div>
+
         </div>
     </div>
 
-    <!-- Script Alpine.js -->
+    <!-- FENÊTRE MODALE D'ÉVALUATION (Comité Technique uniquement) -->
+    <div id="evaluationModal" class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full overflow-hidden transform transition-all">
+
+            <div class="p-6 bg-gray-50 border-b border-gray-100 flex justify-between items-center">
+                <h3 class="text-lg font-bold text-[#1B4F72]" id="modalCandidateTitle">Évaluation de la candidature</h3>
+                <button type="button" onclick="closeEvaluationModal()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Formulaire relié à la méthode evaluer -->
+            <form id="evaluationForm" method="POST" class="p-6 space-y-4">
+                @csrf
+                @method('PUT')
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Statut de la Candidature</label>
+                    <select name="statut_candidature" id="modalStatutCandidature" class="w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-cyan-500 focus:ring-cyan-500" required>
+                        <option value="accepté">Accepté (Conforme)</option>
+                        <option value="refusé">Refusé (Non conforme)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Statut du Marché (Attribution)</label>
+                    <select name="statut_marche" id="modalStatutMarche" class="w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-cyan-500 focus:ring-cyan-500" required>
+                        <option value="en attente">En attente</option>
+                        <option value="tributaire">Tributaire (Attributaire retenu)</option>
+                        <option value="rejeté">Rejeté</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Motif / Commentaire de l'arbitrage</label>
+                    <textarea name="motif_statut" id="modalMotif" rows="3" class="w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-cyan-500 focus:ring-cyan-500" placeholder="Précisez le motif de la décision..."></textarea>
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-4 border-t border-gray-100">
+                    <button type="button" onclick="closeEvaluationModal()" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition">
+                        Annuler
+                    </button>
+                    <button type="submit" class="px-4 py-2 bg-[#27AE60] text-white text-sm font-bold rounded-lg hover:bg-green-700 shadow-sm transition">
+                        Enregistrer la décision
+                    </button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+
+    <!-- Scripts pour manipuler la modale -->
     <script>
-        function candidatureModal() {
-            return {
-                isOpen: false,
-                selectedCandidature: null,
-                documentFields: {
-                    'file_rccm': 'Registre de Commerce (RCCM)',
-                    'file_acte_constitution': 'Acte de Constitution',
-                    'file_dfe': 'Déclaration Fiscale d\'Existence (DFE)',
-                    'file_arf': 'Attestation de Régularité Fiscale (ARF)',
-                    'file_cnps': 'Attestation CNPS',
-                    'file_attestation_bancaire': 'Attestation Bancaire'
-                },
-                openDetails(candidature) {
-                    this.selectedCandidature = candidature;
-                    this.isOpen = true;
-                },
-                formatCurrency(amount) {
-                    if (!amount) return '0';
-                    return new Intl.NumberFormat('fr-FR').format(amount);
-                },
-                parseJson(data) {
-                    if (!data) return [];
-                    if (typeof data === 'string') {
-                        try {
-                            return JSON.parse(data);
-                        } catch (e) {
-                            return [];
-                        }
-                    }
-                    return data;
-                }
-            }
+        function openEvaluationModal(id, candidateName, statutCandidature, statutMarche, motif) {
+            const modal = document.getElementById('evaluationModal');
+            const form = document.getElementById('evaluationForm');
+            const title = document.getElementById('modalCandidateTitle');
+
+            // Mettre à jour l'action du formulaire avec l'URL exacte de la route d'évaluation
+            form.action = `/candidatures/${id}/evaluer`;
+
+            title.innerText = `Arbitrage : ${candidateName}`;
+            document.getElementById('modalStatutCandidature').value = statutCandidature || 'accepté';
+            document.getElementById('modalStatutMarche').value = statutMarche || 'en attente';
+            document.getElementById('modalMotif').value = motif || '';
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeEvaluationModal() {
+            const modal = document.getElementById('evaluationModal');
+            modal.classList.remove('flex');
+            modal.classList.add('hidden');
         }
     </script>
 </x-app-layout>

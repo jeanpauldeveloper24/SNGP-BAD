@@ -13,6 +13,7 @@ use App\Models\ProjectModule;
 use Carbon\Carbon;
 use App\Mail\NotificationStatutCandidature;
 use Illuminate\Support\Facades\Mail;
+use App\Mail\NotificationAttributionMarche;
 
 class MarketController extends Controller
 {
@@ -220,12 +221,12 @@ class MarketController extends Controller
      * Affiche la liste publique des marchés / opportunités.
      */
     public function indexPublique()
-{
-    // Charger les marchés par lots de 10 (ou le nombre de ton choix) pour alléger la requête
-    $markets = Market::with(['project', 'module'])->latest()->paginate(10);
+    {
+        // Charger les marchés par lots de 10 (ou le nombre de ton choix) pour alléger la requête
+        $markets = Market::with(['project', 'module'])->latest()->paginate(10);
 
-    return view('pages.marche.liste', compact('markets'));
-}
+        return view('pages.marche.liste', compact('markets'));
+    }
 
     /**
      * Affiche les détails d'un marché spécifique en accès public.
@@ -239,146 +240,168 @@ class MarketController extends Controller
 
     //postuler à un marché spécifique
     public function postuler(Request $request, $id)
-{
-    $marche = Market::findOrFail($id);
+    {
+        $marche = Market::findOrFail($id);
 
-    // 1. Vérification de la date limite de dépôt
-    if ($marche->candidature_end_date && now()->greaterThan($marche->candidature_end_date)) {
-        return redirect()->back()->with('error', 'La date limite de dépôt des dossiers pour ce marché est dépassée.');
+        // 1. Vérification de la date limite de dépôt
+        if ($marche->candidature_end_date && now()->greaterThan($marche->candidature_end_date)) {
+            return redirect()->back()->with('error', 'La date limite de dépôt des dossiers pour ce marché est dépassée.');
+        }
+
+        // 2. Validation stricte (Tout doit être fourni, sinon échec)
+        $validated = $request->validate([
+            'nom_candidat'              => 'required|string|max:255',
+            'email_candidat'            => 'required|email|max:255',
+            'numero_registre_commerce'  => 'required|string|max:100',
+
+            // Validation assouplie : accepte n'importe quel fichier valide sous la taille maximale
+            'file_rccm'                 => 'required|file|max:10240',
+            'file_acte_constitution'    => 'nullable|file|max:10240',
+            'file_dfe'                  => 'required|file|max:10240',
+            'file_arf'                  => 'required|file|max:10240',
+            'file_cnps'                 => 'required|file|max:10240',
+            'file_attestation_bancaire' => 'required|file|max:10240',
+
+            'proposition_financiere'    => 'required|numeric|min:0',
+        ]);
+
+        // 3. Stockage sécurisé des fichiers PDF
+        $pathRccm     = $request->file('file_rccm')->store('candidatures/rccm', 'public');
+        $pathDfe      = $request->file('file_dfe')->store('candidatures/dfe', 'public');
+        $pathArf      = $request->file('file_arf')->store('candidatures/arf', 'public');
+        $pathCnps     = $request->file('file_cnps')->store('candidatures/cnps', 'public');
+        $pathBancaire = $request->file('file_attestation_bancaire')->store('candidatures/attestations_bancaires', 'public');
+        $pathActeConstitution = $request->hasFile('file_acte_constitution')
+            ? $request->file('file_acte_constitution')->store('candidatures/actes_constitution', 'public')
+            : null;
+
+        // 4. Vérification du plafond budgétaire (Filtre financier initial)
+        $budgetMax = $marche->besoin_financier_fcfa ?? $marche->besoin_financier ?? $marche->montant_max ?? 0;
+
+        $estConformeFinancierement = true;
+        $motif = "Dossier complet et offre financière conforme au budget.";
+
+        if ($budgetMax > 0 && $validated['proposition_financiere'] > $budgetMax) {
+            $estConformeFinancierement = false;
+            $motif = "Offre financière supérieure au besoin financier du marché (" . number_format($budgetMax, 0, ',', ' ') . " FCFA).";
+        }
+
+        // 5. Enregistrement en base de données
+        $candidature = Candidature::create([
+            'marche_id'                 => $marche->id,
+            'nom_candidat'              => $validated['nom_candidat'],
+            'email_candidat'            => $validated['email_candidat'],
+            'numero_registre_commerce'  => $validated['numero_registre_commerce'],
+            'file_rccm'                 => $pathRccm,
+            'file_acte_constitution'    => $pathActeConstitution,
+            'file_dfe'                  => $pathDfe,
+            'file_arf'                  => $pathArf,
+            'file_cnps'                 => $pathCnps,
+            'file_attestation_bancaire' => $pathBancaire,
+            'proposition_financiere'    => $validated['proposition_financiere'],
+
+            'statut_candidature'        => $estConformeFinancierement ? 'accepté' : 'refusé',
+            'statut_marche'             => 'en attente',
+            'motif_statut'              => $motif,
+        ]);
+
+        return redirect()->back()->with('success', 'Votre candidature a été transmise avec succès et est en cours d\'évaluation.');
     }
 
-    // 2. Validation stricte (Tout doit être fourni, sinon échec)
-    $validated = $request->validate([
-        'nom_candidat'              => 'required|string|max:255',
-        'email_candidat'            => 'required|email|max:255',
-        'numero_registre_commerce'  => 'required|string|max:100',
+    // 1. Afficher la liste des candidatures
+    public function candidatureIndex()
+    {
+        // Utilisation de la pagination au lieu de tout charger d'un coup
+        $candidatures = Candidature::with('market')->latest()->paginate(15);
 
-        // Validation assouplie : accepte n'importe quel fichier valide sous la taille maximale
-        'file_rccm'                 => 'required|file|max:10240',
-        'file_acte_constitution'    => 'nullable|file|max:10240',
-        'file_dfe'                  => 'required|file|max:10240',
-        'file_arf'                  => 'required|file|max:10240',
-        'file_cnps'                 => 'required|file|max:10240',
-        'file_attestation_bancaire' => 'required|file|max:10240',
-
-        'proposition_financiere'    => 'required|numeric|min:0',
-    ]);
-
-    // 3. Stockage sécurisé des fichiers PDF
-    $pathRccm     = $request->file('file_rccm')->store('candidatures/rccm', 'public');
-    $pathDfe      = $request->file('file_dfe')->store('candidatures/dfe', 'public');
-    $pathArf      = $request->file('file_arf')->store('candidatures/arf', 'public');
-    $pathCnps     = $request->file('file_cnps')->store('candidatures/cnps', 'public');
-    $pathBancaire = $request->file('file_attestation_bancaire')->store('candidatures/attestations_bancaires', 'public');
-    $pathActeConstitution = $request->hasFile('file_acte_constitution')
-        ? $request->file('file_acte_constitution')->store('candidatures/actes_constitution', 'public')
-        : null;
-
-    // 4. Vérification du plafond budgétaire (Filtre financier initial)
-    $budgetMax = $marche->besoin_financier_fcfa ?? $marche->besoin_financier ?? $marche->montant_max ?? 0;
-    
-    $estConformeFinancierement = true;
-    $motif = "Dossier complet et offre financière conforme au budget.";
-
-    if ($budgetMax > 0 && $validated['proposition_financiere'] > $budgetMax) {
-        $estConformeFinancierement = false;
-        $motif = "Offre financière supérieure au besoin financier du marché (" . number_format($budgetMax, 0, ',', ' ') . " FCFA).";
+        return view('profile.menus.candidatures.liste', compact('candidatures'));
     }
 
-    // 5. Enregistrement en base de données
-    $candidature = Candidature::create([
-        'marche_id'                 => $marche->id,
-        'nom_candidat'              => $validated['nom_candidat'],
-        'email_candidat'            => $validated['email_candidat'],
-        'numero_registre_commerce'  => $validated['numero_registre_commerce'],
-        'file_rccm'                 => $pathRccm,
-        'file_acte_constitution'    => $pathActeConstitution,
-        'file_dfe'                  => $pathDfe,
-        'file_arf'                  => $pathArf,
-        'file_cnps'                 => $pathCnps,
-        'file_attestation_bancaire' => $pathBancaire,
-        'proposition_financiere'    => $validated['proposition_financiere'],
-        
-        'statut_candidature'        => $estConformeFinancierement ? 'accepté' : 'refusé',
-        'statut_marche'             => 'en attente',
-        'motif_statut'              => $motif,
-    ]);
+    // 2. Méthode d'arbitrage (Sélection automatique du moins-disant)
+    public function arbitrer($marcheId)
+    {
+        // SÉCURITÉ BACKEND : Seul le Comité Technique peut arbitrer
+        if (auth()->user()->role->name !== 'comite_technique') {
+            abort(403, 'Action non autorisée. Seul le Comité Technique est habilité à désigner l\'attributaire d\'un marché.');
+        }
 
-    return redirect()->back()->with('success', 'Votre candidature a été transmise avec succès et est en cours d\'évaluation.');
-}
+        $marche = Market::with('candidatures')->findOrFail($marcheId);
 
-//désigner l'offre la moins chère
-public function arbitrer($marcheId)
-{
-    $marche = Market::with('candidatures')->findOrFail($marcheId);
+        // Récupérer uniquement les candidatures acceptées administrativement et financièrement
+        $candidaturesValides = $marche->candidatures()->where('statut_candidature', 'accepté')->get();
 
-    // Récupérer uniquement les candidatures acceptées administrativement et financièrement
-    $candidaturesValides = $marche->candidatures()->where('statut_candidature', 'accepté')->get();
+        if ($candidaturesValides->isEmpty()) {
+            return redirect()->back()->with('error', 'Aucune candidature valide pour procéder à l\'attribution.');
+        }
 
-    if ($candidaturesValides->isEmpty()) {
-        return redirect()->back()->with('error', 'Aucune candidature valide pour procéder à l\'attribution.');
-    }
+        // Trouver l'offre la moins disante (le montant le plus bas)
+        $moinsDisant = $candidaturesValides->sortBy('proposition_financiere')->first();
 
-    // Trouver l'offre la moins disante (le montant le plus bas)
-    $moinsDisant = $candidaturesValides->sortBy('proposition_financiere')->first();
+        foreach ($candidaturesValides as $candidature) {
+            if ($candidature->id === $moinsDisant->id) {
+                // Attributaire du marché
+                $candidature->update([
+                    'statut_marche' => 'tributaire',
+                    'motif_statut'  => 'Offre retenue : moins-disant de la consultation.'
+                ]);
 
-    foreach ($candidaturesValides as $candidature) {
-        if ($candidature->id === $moinsDisant->id) {
-            // Attributaire du marché
-            $candidature->update([
-                'statut_marche' => 'tributaire',
-                'motif_statut'  => 'Offre retenue : moins-disant de la consultation.'
-            ]);
+                // Envoyer l'e-mail de succès au gagnant
+                if (!empty($candidature->email_candidat)) {
+                    try {
+                        Mail::to($candidature->email_candidat)->send(new NotificationAttributionMarche($candidature, true));
+                    } catch (\Exception $e) {
+                        \Log::error("Erreur d'envoi d'e-mail (attributaire) : " . $e->getMessage());
+                    }
+                }
+            } else {
+                // Les autres candidats valides mais non retenus
+                $candidature->update([
+                    'statut_marche' => 'rejeté',
+                    'motif_statut'  => 'Offre conforme mais non retenue (autre candidat moins-disant).'
+                ]);
 
-            // Envoyer l'e-mail de succès au gagnant
-            if (!empty($candidature->email_candidat)) {
-                \Mail::to($candidature->email_candidat)->send(new \App\Mail\NotificationAttributionMarche($candidature, true));
-            }
-        } else {
-            // Les autres candidats valides mais devancés par le moins-disant
-            $candidature->update([
-                'statut_marche' => 'rejeté',
-                'motif_statut'  => 'Offre conforme mais non retenue (autre candidat moins-disant).'
-            ]);
-
-            // Envoyer l'e-mail de refus
-            if (!empty($candidature->email_candidat)) {
-                \Mail::to($candidature->email_candidat)->send(new \App\Mail\NotificationAttributionMarche($candidature, false));
+                // Envoyer l'e-mail de refus
+                if (!empty($candidature->email_candidat)) {
+                    try {
+                        Mail::to($candidature->email_candidat)->send(new NotificationAttributionMarche($candidature, false));
+                    } catch (\Exception $e) {
+                        \Log::error("Erreur d'envoi d'e-mail (rejet) : " . $e->getMessage());
+                    }
+                }
             }
         }
+
+        return redirect()->back()->with('success', 'L\'attribution du marché a été effectuée avec succès au profit du moins-disant.');
     }
 
-    return redirect()->back()->with('success', 'L\'attribution du marché a été effectuée avec succès au profit du moins-disant.');
-}
-
-//evaluer une offre
-public function evaluer(Request $request, Candidature $candidature)
-{
-    $validated = $request->validate([
-        'statut_candidature' => 'required|in:accepté,refusé',
-        'statut_marche'      => 'required|in:en attente,tributaire,rejeté',
-        'motif_statut'       => 'nullable|string',
-    ]);
-
-    // Mise à jour des statuts avec les valeurs fournies par l'administrateur
-    $candidature->update([
-        'statut_candidature' => $validated['statut_candidature'],
-        'statut_marche'      => $validated['statut_marche'],
-        'motif_statut'       => $validated['motif_statut'] ?? $candidature->motif_statut,
-    ]);
-
-    // Envoi de la notification du nouveau statut au candidat
-    if (!empty($candidature->email_candidat)) {
-        try {
-            Mail::to($candidature->email_candidat)
-                ->send(new NotificationStatutCandidature($candidature));
-        } catch (\Exception $e) {
-            \Log::error("Erreur d'envoi d'e-mail (évaluation manuelle) : " . $e->getMessage());
+    // 3. Évaluation manuelle d'une offre (via la modale)
+    public function evaluer(Request $request, Candidature $candidature)
+    {
+        if (auth()->user()->role->name !== 'comite_technique') {
+            abort(403, 'Action non autorisée. Seul le Comité Technique est habilité à évaluer les candidatures.');
         }
+
+        $validated = $request->validate([
+            'statut_candidature' => 'required|in:accepté,refusé',
+            'statut_marche'      => 'required|in:en attente,tributaire,rejeté',
+            'motif_statut'       => 'nullable|string',
+        ]);
+
+        $candidature->update([
+            'statut_candidature' => $validated['statut_candidature'],
+            'statut_marche'      => $validated['statut_marche'],
+            'motif_statut'       => $validated['motif_statut'] ?? $candidature->motif_statut,
+        ]);
+
+        if (!empty($candidature->email_candidat)) {
+            try {
+                Mail::to($candidature->email_candidat)
+                    ->send(new NotificationStatutCandidature($candidature));
+            } catch (\Exception $e) {
+                \Log::error("Erreur d'envoi d'e-mail (évaluation manuelle) : " . $e->getMessage());
+            }
+        }
+
+        return redirect()->back()->with('success', 'Évaluation et notification mises à jour avec succès.');
     }
-
-    return redirect()->back()->with('success', 'Évaluation et notification mises à jour avec succès.');
-}
-
-
 }

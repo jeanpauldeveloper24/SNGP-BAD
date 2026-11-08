@@ -10,7 +10,9 @@ use App\Models\Project;
 use App\Models\Candidature;
 use App\Models\AuditLog;
 use App\Models\Market;
-
+use App\Http\Controllers\PndController; 
+use App\Http\Controllers\CirconscriptionController;
+use App\Models\PndPilier;
 /*
 |--------------------------------------------------------------------------
 | Routes Publiques (Accessibles à tous les visiteurs & candidats)
@@ -51,10 +53,13 @@ Route::middleware('auth')->group(function () {
 
     // 0. TABLEAU DE BORD (Sécurisé)
     Route::get('/dashboard', function () {
-        $projects = \App\Models\Project::all();
+    $projects = \App\Models\Project::all();
+    $exchangeRateUsd = 0.0016;
+    $exchangeRateEur = 0.0015;
+    $piliersStats = collect(); // Vide pour tester
 
-        return view('dashboard', compact('projects'));
-    })->middleware(['auth', 'verified'])->name('dashboard');
+    return view('dashboard', compact('projects', 'exchangeRateUsd', 'exchangeRateEur', 'piliersStats'));
+})->middleware(['auth', 'verified'])->name('dashboard');
 
     // 1. GESTION DU PROFIL PERSONNEL
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -111,22 +116,17 @@ Route::middleware('auth')->group(function () {
     Route::put('/passation/{marche}/etape', [MarketController::class, 'updateEtape'])->name('passation.update-etape');
 
     // 5. REGISTRE DES CANDIDATURES
-    Route::get('/liste-candidatures', function () {
-        $candidatures = Candidature::with('market')->latest()->get();
-        return view('profile.menus.candidatures.liste', compact('candidatures'));
-    })->name('menus.candidatures.liste');
+    // Affichage de la liste des candidatures (relié à candidatureIndex)
+    Route::get('/liste-candidatures', [MarketController::class, 'candidatureIndex'])
+        ->name('menus.candidatures.liste');
 
-    Route::post('/candidatures/{id}/arbitrer', function (Request $request, $id) {
-        $candidature = Candidature::findOrFail($id);
+    // Route pour l'arbitrage automatique global par marché
+    Route::post('/candidatures/{marcheId}/arbitrer', [MarketController::class, 'arbitrer'])
+        ->name('menus.candidatures.arbitrer');
 
-        // Exemple de logique d'arbitrage
-        $candidature->update([
-            'status' => $request->input('status'), // 'Accepté' ou 'Rejeté'
-            'motif_statut' => $request->input('motif_statut'),
-        ]);
-
-        return back()->with('success', 'La candidature a été arbitrée avec succès.');
-    })->name('menus.candidatures.arbitrer');
+    // Route pour l'évaluation / modification individuelle d'une candidature (via la modale)
+    Route::put('/candidatures/{candidature}/evaluer', [MarketController::class, 'evaluer'])
+        ->name('menus.candidatures.evaluer');
 
     // 6. SYSTÈME & LOGS D'AUDIT
     Route::get('/audit', function () {
@@ -150,6 +150,31 @@ Route::middleware('auth')->group(function () {
     Route::get('/menus/sous-menus/historique', function () {
         return view('profile.menus.sous-menus.historique-complet');
     })->name('menus.sous-menus.historique');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Routes de Gestion du PND (Versions et Piliers Stratégiques)
+    |--------------------------------------------------------------------------
+    */
+    Route::get('/profile/menus/pnd', [PndController::class, 'index'])->name('profile.menus.pnd.list');
+    Route::get('/profile/menus/pnd/create', [PndController::class, 'create'])->name('profile.menus.pnd.create');
+    Route::post('/profile/menus/pnd', [PndController::class, 'store'])->name('profile.menus.pnd.store');
+    Route::get('/profile/menus/pnd/{pndVersion}/edit', [PndController::class, 'edit'])->name('profile.menus.pnd.edit');
+    Route::put('/profile/menus/pnd/{pndVersion}', [PndController::class, 'update'])->name('profile.menus.pnd.update');
+    Route::delete('/profile/menus/pnd/{pndVersion}', [PndController::class, 'destroy'])->name('profile.menus.pnd.destroy');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Routes de Gestion du Découpage Territorial (Circonscriptions)
+    |--------------------------------------------------------------------------
+    */
+    Route::get('/profile/menus/circonscription', [CirconscriptionController::class, 'index'])->name('profile.menus.circonscription.list');
+    Route::get('/profile/menus/circonscription/create', [CirconscriptionController::class, 'create'])->name('profile.menus.circonscription.create');
+    Route::post('/profile/menus/circonscription', [CirconscriptionController::class, 'store'])->name('profile.menus.circonscription.store');
+    Route::get('/profile/menus/circonscription/{circonscription}/edit', [CirconscriptionController::class, 'edit'])->name('profile.menus.circonscription.edit');
+    Route::put('/profile/menus/circonscription/{circonscription}', [CirconscriptionController::class, 'update'])->name('profile.menus.circonscription.update');
+    Route::delete('/profile/menus/circonscription/{circonscription}', [CirconscriptionController::class, 'destroy'])->name('profile.menus.circonscription.destroy');
+    
 });
 
 require __DIR__ . '/auth.php';

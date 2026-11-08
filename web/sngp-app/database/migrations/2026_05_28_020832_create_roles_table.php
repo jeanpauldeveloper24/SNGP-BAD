@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('roles', function (Blueprint $table) {
             $table->id();
             $table->string('name')->unique(); // ex: 'ugp', 'administrateur_systeme'
+            $table->string('label');          // Ajout du libellé lisible pour l'interface
             $table->string('description')->nullable();
             $table->string('platform')->default('laravel_web'); // Sécurise la plateforme cible
             $table->timestamps();

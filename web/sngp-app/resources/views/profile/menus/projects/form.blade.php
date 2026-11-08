@@ -1,7 +1,7 @@
 <x-app-layout>
     <div class="py-6 px-4 sm:px-6 lg:px-8">
         <div class="max-w-5xl mx-auto space-y-8">
-            
+
             {{-- Entête du Formulaire --}}
             <div class="border-b border-gray-200 pb-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
@@ -23,7 +23,7 @@
             <form action="{{ isset($project) && $project->exists ? route('projects.update', $project->id) : route('projects.store') }}" method="POST" class="space-y-6">
                 @csrf
                 @if(isset($project) && $project->exists)
-                    @method('PUT')
+                @method('PUT')
                 @endif
 
                 {{-- SECTION 1 : Identification & Classification --}}
@@ -33,19 +33,19 @@
                     </h3>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        
+
                         {{-- Code Projet (Personnalisable ou Automatique) --}}
                         <div>
                             <label for="code" class="block text-xs font-semibold text-gray-700 uppercase">
-                                Code du Projet 
+                                Code du Projet
                                 <span class="text-gray-400 font-normal">(Laisser vide pour génération auto)</span>
                             </label>
-                            <input type="text" 
-                                   name="code" 
-                                   id="code" 
-                                   value="{{ old('code', $project->code ?? '') }}" 
-                                   placeholder="Ex: PROJ-BAD-001 ou laissé vide..." 
-                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 text-xs font-mono font-bold text-cyan-900">
+                            <input type="text"
+                                name="code"
+                                id="code"
+                                value="{{ old('code', $project->code ?? '') }}"
+                                placeholder="Ex: PROJ-BAD-001 ou laissé vide..."
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 text-xs font-mono font-bold text-cyan-900">
                             @error('code') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                         </div>
 
@@ -54,13 +54,13 @@
                             <label for="nom" class="block text-xs font-semibold text-gray-700 uppercase">
                                 Intitulé du Projet <span class="text-red-500">*</span>
                             </label>
-                            <input type="text" 
-                                   name="nom" 
-                                   id="nom" 
-                                   value="{{ old('nom', $project->nom ?? '') }}" 
-                                   required 
-                                   placeholder="Ex: Projet d'extension du réseau électrique" 
-                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 text-xs">
+                            <input type="text"
+                                name="nom"
+                                id="nom"
+                                value="{{ old('nom', $project->nom ?? '') }}"
+                                required
+                                placeholder="Ex: Projet d'extension du réseau électrique"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 text-xs">
                             @error('nom') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
                         </div>
 
@@ -103,47 +103,60 @@
                             <textarea name="description" id="description" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 text-xs" placeholder="Objectifs et portée globale du projet...">{{ old('description', $project->description ?? '') }}</textarea>
                         </div>
 
+                        <div>
+    <label for="status" class="block text-xs font-semibold text-gray-700 uppercase">
+        Statut du Projet <span class="text-red-500">*</span>
+    </label>
+    <select name="status" id="status" class="mt-1 block w-full text-xs rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700" required>
+        <option value="brouillon" {{ old('status', $project->status ?? '') == 'brouillon' ? 'selected' : '' }}>Brouillon</option>
+        <option value="en_cours" {{ old('status', $project->status ?? '') == 'en_cours' ? 'selected' : '' }}>En cours</option>
+        <option value="suspendu" {{ old('status', $project->status ?? '') == 'suspendu' ? 'selected' : '' }}>Suspendu</option>
+        <option value="termine" {{ old('status', $project->status ?? '') == 'termine' ? 'selected' : '' }}>Terminé</option>
+    </select>
+    @error('status') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+</div>
+
                     </div>
                 </div>
 
                 {{-- SECTION 2 : Localisation Administrative --}}
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-6">
-                    <h3 class="text-sm font-bold text-gray-800 uppercase tracking-wider border-b pb-2 flex items-center gap-2">
-                        <span>🗺️</span> 2. Localisation Administrative Principale
-                    </h3>
+                <div class="space-y-4">
+    <h5 class="text-secondary border-bottom pb-2 mb-3 mt-4 text-sm font-bold uppercase text-gray-800">2. Cadre Stratégique & Localisation</h5>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        
-                        {{-- Région --}}
-                        <div>
-                            <label for="region" class="block text-xs font-semibold text-gray-700 uppercase">Région <span class="text-red-500">*</span></label>
-                            <input type="text" name="region" id="region" value="{{ old('region', $project->region ?? '') }}" required placeholder="Ex: Poro" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 text-xs">
-                            @error('region') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-                        </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Pilier PND -->
+        <div>
+            <label for="pnd_pilier_id" class="block text-xs font-semibold text-gray-700 uppercase">
+                Pilier PND <span class="text-red-500">*</span>
+            </label>
+            <select name="pnd_pilier_id" id="pnd_pilier_id" class="mt-1 block w-full text-xs rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700" required>
+                <option value="" disabled {{ old('pnd_pilier_id', $project->pnd_pilier_id ?? '') == '' ? 'selected' : '' }}>-- Sélectionner un pilier du PND --</option>
+                @foreach($pndPiliers ?? [] as $pilier)
+                    <option value="{{ $pilier->id }}" {{ (old('pnd_pilier_id', $project->pnd_pilier_id ?? '') == $pilier->id) ? 'selected' : '' }}>
+                        Pilier {{ $pilier->numero }} : {{ $pilier->libelle }}
+                    </option>
+                @endforeach
+            </select>
+            @error('pnd_pilier_id') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+        </div>
 
-                        {{-- Département --}}
-                        <div>
-                            <label for="departement" class="block text-xs font-semibold text-gray-700 uppercase">Département</label>
-                            <input type="text" name="departement" id="departement" value="{{ old('departement', $project->departement ?? '') }}" placeholder="Ex: Korhogo" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 text-xs">
-                            @error('departement') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-                        </div>
-
-                        {{-- Commune --}}
-                        <div>
-                            <label for="commune" class="block text-xs font-semibold text-gray-700 uppercase">Commune <span class="text-red-500">*</span></label>
-                            <input type="text" name="commune" id="commune" value="{{ old('commune', $project->commune ?? '') }}" required placeholder="Ex: Korhogo Ville" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 text-xs">
-                            @error('commune') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-                        </div>
-
-                        {{-- Ville / Agglomération --}}
-                        <div>
-                            <label for="ville" class="block text-xs font-semibold text-gray-700 uppercase">Ville / Agglomération</label>
-                            <input type="text" name="ville" id="ville" value="{{ old('ville', $project->ville ?? '') }}" placeholder="Ex: Korhogo" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700 text-xs">
-                            @error('ville') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-                        </div>
-
-                    </div>
-                </div>
+        <!-- Circonscription Administrative -->
+        <div>
+            <label for="circonscription_id" class="block text-xs font-semibold text-gray-700 uppercase">
+                Circonscription Administrative <span class="text-red-500">*</span>
+            </label>
+            <select name="circonscription_id" id="circonscription_id" class="mt-1 block w-full text-xs rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700" required>
+                <option value="" disabled {{ old('circonscription_id', $project->circonscription_id ?? '') == '' ? 'selected' : '' }}>-- Sélectionner une circonscription --</option>
+                @foreach($circonscriptions ?? [] as $circonscription)
+                    <option value="{{ $circonscription->id }}" {{ (old('circonscription_id', $project->circonscription_id ?? '') == $circonscription->id) ? 'selected' : '' }}>
+                        {{ $circonscription->nom }} ({{ ucfirst($circonscription->type) }})
+                    </option>
+                @endforeach
+            </select>
+            @error('circonscription_id') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+        </div>
+    </div>
+</div>
 
                 {{-- SECTION 3 : Cadrage Financier & Calendrier --}}
                 <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-6" x-data="{
@@ -185,7 +198,7 @@
                     </h3>
 
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        
+
                         {{-- Budget Initial --}}
                         <div>
                             <label for="budget_initial" class="block text-xs font-semibold text-gray-700 uppercase">Budget Initial <span class="text-red-500">*</span></label>
@@ -291,7 +304,9 @@
                                 </div>
                                 <div class="pt-3">
                                     <button type="button" @click="removeModule(index)" class="text-red-500 hover:text-red-700 p-1">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
                                     </button>
                                 </div>
                             </div>

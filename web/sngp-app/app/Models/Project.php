@@ -19,17 +19,18 @@ class Project extends Model
 {
     use Loggable;
 
+    // Constantes pour les statuts du projet
+    const STATUS_BROUILLON = 'brouillon';
+    const STATUS_EN_COURS = 'en_cours';
+    const STATUS_TERMINE = 'termine';
+    const STATUS_SUSPENDU = 'suspendu';
+
     protected $fillable = [
         'code',
         'nom',
         'description',
         'secteur_activite',
         'categorie',
-        'region',
-        'departement',
-        'commune',
-        'ville',
-        'zones_couvertes',
         'budget_initial',
         'budget_devise',
         'budget_value',
@@ -44,10 +45,11 @@ class Project extends Model
         'status',
         'user_id',
         'validated_by',
+        'pnd_pilier_id',
+        'circonscription_id',
     ];
 
     protected $casts = [
-        'zones_couvertes'      => 'array',
         'budget_initial'       => 'decimal:2',
         'budget_value'         => 'decimal:2',
         'taux_change'          => 'decimal:4',
@@ -81,6 +83,38 @@ class Project extends Model
 
         // Conversion avec le taux de change
         return $initial * $taux;
+    }
+
+    /**
+     * Scope pour filtrer les projets terminés
+     */
+    public function scopeTermines($query)
+    {
+        return $query->where('status', self::STATUS_TERMINE);
+    }
+
+    /**
+     * Scope pour filtrer les projets en cours
+     */
+    public function scopeEnCours($query)
+    {
+        return $query->where('status', self::STATUS_EN_COURS);
+    }
+
+    /**
+     * Relation : Un projet est rattaché à un unique pilier du PND.
+     */
+    public function pndPilier(): BelongsTo
+    {
+        return $this->belongsTo(PndPilier::class, 'pnd_pilier_id');
+    }
+
+    /**
+     * Relation : Un projet est rattaché à une unique circonscription administrative.
+     */
+    public function circonscription(): BelongsTo
+    {
+        return $this->belongsTo(Circonscription::class, 'circonscription_id');
     }
 
     public function modules(): HasMany

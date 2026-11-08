@@ -30,7 +30,7 @@
                     <div class="flex items-center gap-3">
                         <div class="hidden lg:block text-right">
                             <p class="text-sm font-bold text-[#1B4F72]">{{ Auth::user()->name }}</p>
-                            <p class="text-[10px] text-[#27AE60] font-bold uppercase">{{ Auth::user()->role->name ?? '' }}</p>
+                            <p class="text-[10px] text-[#27AE60] font-semibold">{{ Auth::user()->role->label ?? '' }}</p>
                         </div>
                         @if(Auth::user()->photo)
                         <img src="{{ Auth::user()->photo }}" alt="Profil" class="w-10 h-10 rounded-full object-cover border-2 border-cyan-600 shadow-sm">

@@ -18,15 +18,6 @@ return new class extends Migration
             $table->string('secteur_activite');
             $table->string('categorie');
 
-            // Géolocalisation Principale (Sert d'ancre pour le Code Projet)
-            $table->string('region');
-            $table->string('departement')->nullable();
-            $table->string('commune');
-            $table->string('ville')->nullable();
-
-            // Multi-localisation (Pour les projets multi-villes/multi-régions)
-            $table->json('zones_couvertes')->nullable();
-
             // Gestion financière multi-devises
             $table->decimal('budget_initial', 15, 2); 
             $table->string('budget_devise', 10)->default('XOF'); 
@@ -34,8 +25,8 @@ return new class extends Migration
             $table->decimal('taux_change', 10, 4)->default(1.0000); 
             
             // Ventilation du financement
-            $table->decimal('financement_bailleur', 15, 2)->nullable(); 
-            $table->decimal('financement_etat', 15, 2)->nullable();     
+            $table->decimal('financement_bailleur', 15, 2)->nullable()->default(0.00); 
+            $table->decimal('financement_etat', 15, 2)->nullable()->default(0.00);    
             $table->decimal('pourcentage_bailleur', 5, 2)->nullable(); 
             $table->decimal('pourcentage_etat', 5, 2)->nullable();    
             
@@ -43,8 +34,10 @@ return new class extends Migration
             $table->date('end_date')->nullable();
             $table->decimal('taux_execution', 5, 2)->default(0.00);
             $table->string('status')->default('brouillon'); 
-            
-            // Relations
+
+            // Clés étrangères et relations
+            $table->foreignId('pnd_pilier_id')->constrained('pnd_piliers')->onDelete('cascade');
+            $table->foreignId('circonscription_id')->constrained('circonscriptions')->onDelete('cascade');
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->foreignId('validated_by')->nullable()->constrained('users')->nullOnDelete();
             

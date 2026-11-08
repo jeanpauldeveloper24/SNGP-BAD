@@ -17,7 +17,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'locale', 
+        'locale',
         'phone',
         'photo',
         'role_id',

@@ -15,6 +15,8 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use App\Services\ProjectCodeGenerator;
+use App\Models\PndPilier;
+use App\Models\Circonscription;
 
 class ProjectController extends Controller
 {
@@ -404,11 +406,16 @@ private function getExchangeRates()
      * Formulaire d'ajout -> form.blade.php
      */
     public function create()
-    {
-        // On passe une instance vide pour que Blade et Alpine.js lisent des valeurs neutres
-        $project = new Project();
-        return view('profile.menus.projects.form', compact('project'));
-    }
+{
+    // Instance vide pour que Blade et Alpine.js lisent des valeurs neutres
+    $project = new Project();
+    
+    // Récupération des données pour les listes déroulantes
+    $pndPiliers = PndPilier::all();
+    $circonscriptions = Circonscription::all();
+
+    return view('profile.menus.projects.form', compact('project', 'pndPiliers', 'circonscriptions'));
+}
 
     /**
      * Redirection ou nettoyage de passationCreate dans ProjectController
@@ -438,157 +445,86 @@ private function getExchangeRates()
     }
 
     public function edit($id)
-    {
-        // On récupère le projet avec ses composantes (modules)
-        $project = Project::with('modules')->findOrFail($id);
+{
+    // On récupère le projet avec ses composantes (modules)
+    $project = Project::with('modules')->findOrFail($id);
 
-        // On charge le fichier form.blade.php en lui injectant le projet
-        return view('profile.menus.projects.form', compact('project'));
-    }
+    // Récupération des données pour les listes déroulantes
+    $pndPiliers = PndPilier::all();
+    $circonscriptions = Circonscription::all();
 
-    public function update(Request $request, $id)
-    {
-        $validated = $request->validate([
-            'nom'                  => 'required|string|max:255',
-            'secteur_activite'     => 'required|string',
-            'categorie'            => 'required|string',
-            'region'               => 'required|string|max:100',
-            'departement'          => 'nullable|string|max:100',
-            'commune'              => 'required|string|max:100',
-            'ville'                => 'nullable|string|max:100',
-            'zones_couvertes'      => 'nullable|array',
-            'budget_initial'       => 'required|numeric|min:0',
-            'budget_devise'        => 'required|string|max:10',
-            'taux_change'          => 'nullable|numeric|min:0',
-            'pourcentage_bailleur' => 'nullable|numeric|min:0|max:100',
-            'pourcentage_etat'     => 'nullable|numeric|min:0|max:100',
-            'financement_bailleur' => 'nullable|numeric|min:0',
-            'financement_etat'     => 'nullable|numeric|min:0',
-            'description'          => 'nullable|string',
-            'start_date'           => 'nullable|date',
-            'end_date'             => 'nullable|date|after_or_equal:start_date',
-            'modules'              => 'nullable|array',
-            'modules.*.number'     => 'required',
-            'modules.*.description' => 'required|string',
-            'modules.*.besoin_financier' => 'required|numeric',
-            'modules.*.duree'      => 'required',
-        ]);
-
-        $project = Project::findOrFail($id);
-        $taux = $request->input('taux_change', 1.0);
-
-        $project->update([
-            'nom'                  => $validated['nom'],
-            'description'          => $request->input('description'),
-            'secteur_activite'     => $validated['secteur_activite'],
-            'categorie'            => $validated['categorie'],
-            'region'               => $validated['region'],
-            'departement'          => $request->input('departement'),
-            'commune'              => $validated['commune'],
-            'ville'                => $request->input('ville'),
-            'zones_couvertes'      => $request->input('zones_couvertes', []),
-            'budget_initial'       => $validated['budget_initial'],
-            'budget_devise'        => $validated['budget_devise'],
-            'taux_change'          => $taux,
-            'budget_value'         => $validated['budget_initial'] * $taux,
-            'pourcentage_bailleur' => $request->input('pourcentage_bailleur'),
-            'pourcentage_etat'     => $request->input('pourcentage_etat'),
-            'financement_bailleur' => $request->input('financement_bailleur'),
-            'financement_etat'     => $request->input('financement_etat'),
-            'start_date'           => $request->input('start_date'),
-            'end_date'             => $request->input('end_date'),
-        ]);
-
-        if ($request->has('modules')) {
-            $project->modules()->delete();
-            foreach ($request->modules as $moduleData) {
-                $project->modules()->create([
-                    'number'           => $moduleData['number'],
-                    'description'      => $moduleData['description'],
-                    'besoin_financier' => $moduleData['besoin_financier'],
-                    'devise'           => $validated['budget_devise'],
-                    'duree'            => $moduleData['duree'],
-                ]);
-            }
-        }
-
-        return redirect()->route('profile.menus.projects.list')
-            ->with('success', 'Le projet a été mis à jour avec succès.');
-    }
+    // On charge le formulaire en lui injectant le projet et les listes
+    return view('profile.menus.projects.form', compact('project', 'pndPiliers', 'circonscriptions'));
+}
 
     /**
      * Enregistre un projet, génère automatiquement son code et enregistre ses modules.
      */
     public function store(Request $request)
     {
-        // 1. Validation : le code devient optionnel à la saisie, mais s'il est renseigné il doit être unique
         $validated = $request->validate([
             'code'                 => 'nullable|string|max:100|unique:projects,code',
             'nom'                  => 'required|string|max:255',
             'description'          => 'nullable|string',
             'secteur_activite'     => 'required|string',
             'categorie'            => 'required|string',
-            'region'               => 'required|string|max:100',
-            'departement'          => 'nullable|string|max:100',
-            'commune'              => 'required|string|max:100',
-            'ville'                => 'nullable|string|max:100',
-            'zones_couvertes'      => 'nullable|array',
             'budget_initial'       => 'required|numeric|min:0',
             'budget_devise'        => 'required|string|max:10',
-            'budget_value'         => 'nullable|numeric',
-            'taux_change'          => 'nullable|numeric',
-            'financement_bailleur' => 'nullable|numeric',
-            'financement_etat'     => 'nullable|numeric',
+            'budget_value'         => 'nullable|numeric|min:0',
+            'taux_change'          => 'nullable|numeric|min:0',
+            'financement_bailleur' => 'nullable|numeric|min:0',
+            'financement_etat'     => 'nullable|numeric|min:0',
+            'pourcentage_bailleur' => 'nullable|numeric|min:0|max:100',
+            'pourcentage_etat'     => 'nullable|numeric|min:0|max:100',
             'start_date'           => 'nullable|date',
-            'end_date'             => 'nullable|date',
+            'end_date'             => 'nullable|date|after_or_equal:start_date',
+            'status'               => 'nullable|string|in:brouillon,en_cours,termine,suspendu', // <-- Validation du statut
+            'pnd_pilier_id'        => 'required|exists:pnd_piliers,id',
+            'circonscription_id'   => 'required|exists:circonscriptions,id',
             'modules'              => 'nullable|array',
             'modules.*.number'     => 'required',
-            'modules.*.description' => 'required|string',
-            'modules.*.besoin_financier' => 'required|numeric',
+            'modules.*.description'=> 'required|string',
+            'modules.*.besoin_financier' => 'required|numeric|min:0',
             'modules.*.duree'      => 'required',
         ]);
 
         try {
             DB::beginTransaction();
 
-            // 2. Détermination du Code Projet (Manuel vs Généré automatiquement)
             $codeProjet = $request->filled('code')
                 ? trim($request->input('code'))
                 : ProjectCodeGenerator::generate([
-                    'region'           => $validated['region'],
-                    'commune'          => $validated['commune'],
-                    'ville'            => $request->input('ville'),
                     'secteur_activite' => $validated['secteur_activite'],
                     'categorie'        => $validated['categorie'],
                 ]);
 
-            // 3. Assemblage des données du projet
+            $taux = (float) $request->input('taux_change', 1.0);
+            $budgetInitial = (float) $validated['budget_initial'];
+
             $projectData = [
                 'code'                 => $codeProjet,
                 'nom'                  => $validated['nom'],
                 'description'          => $request->input('description'),
                 'secteur_activite'     => $validated['secteur_activite'],
                 'categorie'            => $validated['categorie'],
-                'region'               => $validated['region'],
-                'departement'          => $request->input('departement'),
-                'commune'              => $validated['commune'],
-                'ville'                => $request->input('ville'),
-                'zones_couvertes'      => $request->input('zones_couvertes', []),
-                'budget_initial'       => $validated['budget_initial'],
+                'budget_initial'       => $budgetInitial,
                 'budget_devise'        => $validated['budget_devise'],
-                'budget_value'         => $request->input('budget_value', 0),
-                'taux_change'          => $request->input('taux_change', 1.0),
+                'taux_change'          => $taux,
+                'budget_value'         => $budgetInitial * $taux, // <-- Multiplicateur corrigé ici
                 'financement_bailleur' => $request->input('financement_bailleur', 0),
                 'financement_etat'     => $request->input('financement_etat', 0),
+                'pourcentage_bailleur' => $request->input('pourcentage_bailleur'),
+                'pourcentage_etat'     => $request->input('pourcentage_etat'),
                 'start_date'           => $request->input('start_date'),
                 'end_date'             => $request->input('end_date'),
-                'status'               => 'brouillon',
+                'pnd_pilier_id'        => $validated['pnd_pilier_id'],
+                'circonscription_id'   => $validated['circonscription_id'],
+                'status'               => $request->input('status', 'brouillon'), // <-- Utilise la valeur envoyée ou 'brouillon' par défaut
                 'user_id'              => Auth::id() ?? 1,
             ];
 
             $project = Project::create($projectData);
 
-            // 4. Création des modules
             if ($request->filled('modules')) {
                 foreach ($request->modules as $moduleData) {
                     $project->modules()->create([
@@ -610,6 +546,87 @@ private function getExchangeRates()
             Log::error("Erreur lors de la création du projet : " . $e->getMessage());
 
             return back()->withInput()->with('error', 'Erreur lors de l\'enregistrement : ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Met à jour le projet existant.
+     */
+    public function update(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'nom'                  => 'required|string|max:255',
+            'secteur_activite'     => 'required|string',
+            'categorie'            => 'required|string',
+            'budget_initial'       => 'required|numeric|min:0',
+            'budget_devise'        => 'required|string|max:10',
+            'taux_change'          => 'nullable|numeric|min:0',
+            'financement_bailleur' => 'nullable|numeric|min:0',
+            'financement_etat'     => 'nullable|numeric|min:0',
+            'pourcentage_bailleur' => 'nullable|numeric|min:0|max:100',
+            'pourcentage_etat'     => 'nullable|numeric|min:0|max:100',
+            'description'          => 'nullable|string',
+            'start_date'           => 'nullable|date',
+            'end_date'             => 'nullable|date|after_or_equal:start_date',
+            'status'               => 'required|string|in:brouillon,en_cours,termine,suspendu', // <-- Validation du statut
+            'pnd_pilier_id'        => 'required|exists:pnd_piliers,id',
+            'circonscription_id'   => 'required|exists:circonscriptions,id',
+            'modules'              => 'nullable|array',
+            'modules.*.number'     => 'required',
+            'modules.*.description'=> 'required|string',
+            'modules.*.besoin_financier' => 'required|numeric|min:0',
+            'modules.*.duree'      => 'required',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $project = Project::findOrFail($id);
+            $taux = (float) $request->input('taux_change', 1.0);
+            $budgetInitial = (float) $validated['budget_initial'];
+
+            $project->update([
+                'nom'                  => $validated['nom'],
+                'description'          => $request->input('description'),
+                'secteur_activite'     => $validated['secteur_activite'],
+                'categorie'            => $validated['categorie'],
+                'budget_initial'       => $budgetInitial,
+                'budget_devise'        => $validated['budget_devise'],
+                'taux_change'          => $taux,
+                'budget_value'         => $budgetInitial * $taux, // <-- Multiplicateur corrigé ici
+                'financement_bailleur' => $request->input('financement_bailleur', 0),
+                'financement_etat'     => $request->input('financement_etat', 0),
+                'pourcentage_bailleur' => $request->input('pourcentage_bailleur'),
+                'pourcentage_etat'     => $request->input('pourcentage_etat'),
+                'start_date'           => $request->input('start_date'),
+                'end_date'             => $request->input('end_date'),
+                'status'               => $validated['status'], // <-- Mise à jour du statut
+                'pnd_pilier_id'        => $validated['pnd_pilier_id'],
+                'circonscription_id'   => $validated['circonscription_id'],
+            ]);
+
+            if ($request->has('modules')) {
+                $project->modules()->delete();
+                foreach ($request->modules as $moduleData) {
+                    $project->modules()->create([
+                        'number'           => $moduleData['number'],
+                        'description'      => $moduleData['description'],
+                        'besoin_financier' => $moduleData['besoin_financier'],
+                        'devise'           => $validated['budget_devise'],
+                        'duree'            => $moduleData['duree'],
+                    ]);
+                }
+            }
+
+            DB::commit();
+
+            return redirect()->route('profile.menus.projects.list')
+                ->with('success', 'Le projet a été mis à jour avec succès.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error("Erreur lors de la mise à jour du projet : " . $e->getMessage());
+
+            return back()->withInput()->with('error', 'Erreur lors de la mise à jour : ' . $e->getMessage());
         }
     }
 

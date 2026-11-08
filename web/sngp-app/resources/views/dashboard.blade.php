@@ -1,23 +1,34 @@
 <x-app-layout>
     <!-- Calcul PHP des pourcentages de co-financement et de l'évolution physico-financière -->
     @php
-    $totalBailleur = $projects->sum('financement_bailleur');
-    $totalEtat = $projects->sum('financement_etat');
-    $totalGlobal = $totalBailleur + $totalEtat;
+        $user = Auth::user();
+        
+        // Sécurisation robuste du rôle pour éviter le crash "Call to a member function first() on null"
+        $roleName = '';
+        if ($user && method_exists($user, 'roles') && $user->roles) {
+            $firstRole = $user->roles->first();
+            $roleName = $firstRole ? $firstRole->name : '';
+        }
 
-    // Si le total est à 0, on met les pourcentages à 0 au lieu de 50
-    $pctBailleur = $totalGlobal > 0 ? ($totalBailleur / $totalGlobal) * 100 : 0;
-    $pctEtat = $totalGlobal > 0 ? ($totalEtat / $totalGlobal) * 100 : 0;
+        $projects = $projects ?? collect();
+        $totalBailleur = $projects->sum('financement_bailleur');
+        $totalEtat = $projects->sum('financement_etat');
+        $totalGlobal = $totalBailleur + $totalEtat;
 
-    $tauxPhysiqueGlobal = $projects->avg('taux_execution') ?? 0;
+        $pctBailleur = $totalGlobal > 0 ? ($totalBailleur / $totalGlobal) * 100 : 0;
+        $pctEtat = $totalGlobal > 0 ? ($totalEtat / $totalGlobal) * 100 : 0;
 
-    $totalBudgetInitial = $projects->sum('budget_in_fcfa');
+        $tauxPhysiqueGlobal = $projects->count() > 0 ? $projects->avg('taux_execution') : 0;
+        $totalBudgetInitial = $projects->sum('budget_in_fcfa');
 
-    $totalPaiementsValides = \App\Models\Paiement::whereIn('project_id', $projects->pluck('id'))
-    ->where('status', 'valide')
-    ->sum('montant');
+        $totalPaiementsValides = 0;
+        if ($projects->isNotEmpty()) {
+            $totalPaiementsValides = \App\Models\Paiement::whereIn('project_id', $projects->pluck('id'))
+                ->where('status', 'valide')
+                ->sum('montant');
+        }
 
-    $tauxFinancierGlobal = $totalBudgetInitial > 0 ? ($totalPaiementsValides / $totalBudgetInitial) * 100 : 0;
+        $tauxFinancierGlobal = $totalBudgetInitial > 0 ? ($totalPaiementsValides / $totalBudgetInitial) * 100 : 0;
     @endphp
 
     <!-- On initialise Alpine qui enveloppe TOUTE la vue -->
@@ -40,12 +51,23 @@
                 <div>
                     <h2 class="text-xl font-bold text-[#1B4F72]">TABLEAU DE BORD STRATÉGIQUE</h2>
                     <p class="text-xs text-gray-500">
-                        @if(auth()->check() && auth()->user()->hasRole('ugp'))
-                        ESPACE DE SUIVI OPÉRATIONNEL (UGP)
+                        @if($roleName === 'ugp')
+                            ESPACE DE SUIVI OPÉRATIONNEL (UGP)
+                        @elseif($roleName === 'ministre')
+                            CABINET MINISTÉRIEL - VUE STRATÉGIQUE HAUTE NIVELATION
+                        @elseif($roleName === 'representant_bad')
+                            PORTEFEUILLE DES PROJETS COFINANCÉS PAR LA BAD
+                        @elseif($roleName === 'direction_nationale')
+                            DIRECTION NATIONALE DE SUIVI DES PROGRAMMES
                         @else
-                        PORTEFEUILLE GLOBAL SNGP - BAD & ÉTAT DE CÔTE D'IVOIRE
+                            PORTEFEUILLE GLOBAL SNGP - BAD & ÉTAT DE CÔTE D'IVOIRE
                         @endif
                     </p>
+                </div>
+                <div>
+                    <span class="px-3 py-1.5 text-xs font-bold uppercase rounded-full bg-cyan-50 text-cyan-800 ring-1 ring-inset ring-cyan-700/10 tracking-wider">
+                        Rôle : {{ str_replace('_', ' ', $roleName) }}
+                    </span>
                 </div>
             </div>
         </x-slot>
@@ -128,12 +150,58 @@
             </div>
         </div>
 
+        <!-- ==================================================================== -->
+        <!-- BLOC OPTIONNEL : ALIGNEMENT STRATÉGIQUE PND -->
+        <!-- Masqué pour les profils purement opérationnels / comptables -->
+        <!-- ==================================================================== -->
+        @if(in_array($roleName, ['ministre', 'comite_technique', 'representant_bad', 'direction_nationale', 'administrateur_systeme']))
+            <div class="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h4 class="font-bold text-[#1B4F72] text-xs uppercase">🏛️ Distribution Stratégique par Pilier PND (2026-2030)</h4>
+                        <p class="text-[11px] text-gray-500">Volume d'investissement et nombre de projets engagés par axe national.</p>
+                    </div>
+                    <a href="{{ route('profile.menus.pnd.list') }}" class="text-xs font-bold text-[#2E86C1] hover:underline">
+                        Consulter les détails PND →
+                    </a>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    @forelse($piliersStats ?? [] as $pilier)
+                        <div class="bg-gray-50 p-4 rounded-lg border border-gray-100 flex flex-col justify-between">
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="w-7 h-7 rounded-full bg-[#1B4F72] text-white font-bold text-xs flex items-center justify-center">
+                                        P{{ $pilier->numero }}
+                                    </span>
+                                    <span class="text-xs font-bold text-[#1B4F72] bg-blue-50 px-2 py-0.5 rounded-full">
+                                        {{ $pilier->projects_count }} Projet(s)
+                                    </span>
+                                </div>
+                                <h5 class="text-xs font-bold text-gray-800 line-clamp-2" title="{{ $pilier->libelle }}">
+                                    {{ $pilier->libelle }}
+                                </h5>
+                            </div>
+                            <div class="mt-4 pt-3 border-t border-gray-200/60 flex items-center justify-between text-xs">
+                                <span class="text-gray-500">Montant Investi :</span>
+                                <strong class="text-gray-900 font-bold" x-text="format({{ $pilier->total_investi ?? 0 }})"></strong>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="col-span-3 text-center py-4 text-gray-400 italic text-xs">
+                            Aucun pilier PND n'est rattaché aux projets actuels.
+                        </div>
+                    @endforelse
+                </div>
+            </div>
+        @endif
+
         <!-- Liste des Projets -->
         <div class="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
             <div class="flex justify-between items-center mb-3">
                 <h4 class="font-bold text-[#1B4F72] text-xs uppercase">Suivi des Projets de l'UGP</h4>
 
-                @if(auth()->check() && !auth()->user()->hasRole('ugp'))
+                @if(!in_array($roleName, ['ugp', 'comptable', 'auditeur']))
                 <a href="#" class="px-3 py-1.5 bg-[#1B4F72] text-white rounded-lg text-xs font-semibold hover:bg-[#153e5c] transition">
                     + Rédiger / Valider un Bilan de Projet
                 </a>
@@ -146,7 +214,7 @@
                         <tr class="border-b border-gray-100 text-gray-400 uppercase">
                             <th class="pb-2">Code</th>
                             <th class="pb-2">Projet</th>
-                            <th class="pb-2">Région</th>
+                            <th class="pb-2">Circonscription / Zone</th>
                             <th class="pb-2 text-right">Budget</th>
                             <th class="pb-2 text-center">Avancement Physique / Financier</th>
                             <th class="pb-2 text-right">Actions</th>
@@ -157,7 +225,9 @@
                         <tr>
                             <td class="py-3 font-bold text-[#1B4F72]">{{ $project->code }}</td>
                             <td class="py-3 font-medium text-gray-800">{{ $project->nom }}</td>
-                            <td class="py-3 text-gray-500">{{ $project->region ?? 'National' }}</td>
+                            <td class="py-3 text-gray-500">
+                                {{ $project->circonscription->nom ?? ($project->region ?? 'National') }}
+                            </td>
                             <!-- Budget converti dynamiquement par ligne -->
                             <td class="py-3 text-right font-bold"
                                 x-text="format({{ $project->budget_in_fcfa ?? 0 }})">
@@ -170,7 +240,7 @@
                             <td class="py-3 text-right space-x-2">
                                 <a href="#" class="text-[#27AE60] font-bold hover:underline">Mettre à jour</a>
 
-                                @if(auth()->check() && !auth()->user()->hasRole('ugp'))
+                                @if(!in_array($roleName, ['ugp', 'comptable']))
                                 <span class="text-gray-300">|</span>
                                 <a href="#" class="text-gray-500 hover:text-gray-800">Bilan</a>
                                 @endif

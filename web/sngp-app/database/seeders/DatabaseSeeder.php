@@ -13,5 +13,10 @@ class DatabaseSeeder extends Seeder
     {
         // On initialise uniquement la table des rôles
         $this->call(RoleSeeder::class);
+
+        $this->call([
+            PndSeeder::class,
+            CirconscriptionSeeder::class,
+        ]);
     }
 }

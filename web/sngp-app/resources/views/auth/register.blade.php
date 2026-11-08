@@ -94,37 +94,37 @@
 
                 <!-- Sélection du Rôle d'Autorité (Filtré dynamiquement selon quotas) -->
                 <div>
-                    <x-input-label for="role_id" value="Rôle d'Autorité" class="font-inter font-semibold text-gray-700" />
-                    <div class="mt-1 relative rounded-md shadow-sm">
-                        <select id="role_id" name="role_id" required
-                            class="block w-full pl-4 pr-10 py-3 border-gray-300 focus:border-[#27AE60] focus:ring-[#27AE60] rounded-lg shadow-sm font-inter text-gray-700 appearance-none bg-white">
-                            <option value="" disabled selected>Sélectionnez votre niveau d'autorité</option>
-                            
-                            @php
-                                $roles = \App\Models\Role::whereIn('name', ['administrateur_systeme', 'ordonnateur'])->get();
-                            @endphp
+    <x-input-label for="role_id" value="Rôle d'Autorité" class="font-inter font-semibold text-gray-700" />
+    <div class="mt-1 relative rounded-md shadow-sm">
+        <select id="role_id" name="role_id" required
+            class="block w-full pl-4 pr-10 py-3 border-gray-300 focus:border-[#27AE60] focus:ring-[#27AE60] rounded-lg shadow-sm font-inter text-gray-700 appearance-none bg-white">
+            <option value="" disabled selected>Sélectionnez votre niveau d'autorité</option>
+            
+            @php
+                $roles = \App\Models\Role::whereIn('name', ['administrateur_systeme', 'ordonnateur'])->get();
+            @endphp
 
-                            @foreach($roles as $role)
-                                @php
-                                    $count = \App\Models\User::where('role_id', $role->id)->count();
-                                    $isFull = ($role->name === 'ordonnateur' && $count >= 1) || ($role->name === 'administrateur_systeme' && $count >= 2);
-                                @endphp
-                                
-                                @if(!$isFull)
-                                    <option value="{{ $role->id }}" {{ old('role_id') == $role->id ? 'selected' : '' }}>
-                                        {{ $role->name === 'administrateur_systeme' ? 'Administrateur Système' : 'Ordonnateur' }}
-                                    </option>
-                                @endif
-                            @endforeach
-                        </select>
-                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                            </svg>
-                        </div>
-                    </div>
-                    <x-input-error :messages="$errors->get('role_id')" class="mt-2" />
-                </div>
+            @foreach($roles as $role)
+                @php
+                    $count = \App\Models\User::where('role_id', $role->id)->count();
+                    $isFull = ($role->name === 'ordonnateur' && $count >= 1) || ($role->name === 'administrateur_systeme' && $count >= 2);
+                @endphp
+                
+                @if(!$isFull)
+                    <option value="{{ $role->id }}" {{ old('role_id') == $role->id ? 'selected' : '' }}>
+                        {{ $role->label }}
+                    </option>
+                @endif
+            @endforeach
+        </select>
+        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+        </div>
+    </div>
+    <x-input-error :messages="$errors->get('role_id')" class="mt-2" />
+</div>
 
                 <!-- Mot de passe -->
                 <div>
