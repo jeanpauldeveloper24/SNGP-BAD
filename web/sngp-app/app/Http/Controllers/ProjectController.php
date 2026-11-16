@@ -42,7 +42,7 @@ class ProjectController extends Controller
     /**
      * Affichage de la console d'arbitrage budgétaire réel avec Taux de change API
      */
-private function getExchangeRates()
+    private function getExchangeRates()
     {
         // 1. Récupérer le taux USD -> XOF avec mise en cache de 6 heures
         $usdToXof = Cache::remember('usd_to_xof_rate', now()->addHours(6), function () {
@@ -76,14 +76,26 @@ private function getExchangeRates()
         // Récupération des taux via la méthode privée
         $rates = $this->getExchangeRates();
 
-        // Gestion des rôles pour les projets de l'UGP ou vue globale
         $user = auth()->user();
-        if ($user && $user->hasRole('ugp')) {
-            $projects = Project::with(['paiements'])->where('user_id', $user->id)->orderBy('code', 'asc')->get();
-        } else {
-            $projects = Project::with(['paiements'])->orderBy('code', 'asc')->get();
-        }
+        $roleName = $user->role ? strtolower($user->role->name) : '';
 
+        // Construction de la requête de base avec toutes les relations utiles
+        $query = Project::with(['modules', 'markets', 'paiements']);
+
+        // Filtrage selon le rôle de l'utilisateur connecté
+        if ($roleName === 'comite_technique') {
+            // Le comité technique ne voit que les projets qui lui sont assignés
+            $projectIds = $user->assignedProjects()->pluck('projects.id');
+            $query->whereIn('id', $projectIds);
+        } elseif ($user && $user->hasRole('ugp')) {
+            // L'UGP voit ses propres projets
+            $query->where('user_id', $user->id);
+        }
+        // Sinon (Admin, Ordonnateur, etc.), la requête reste globale sans filtre de propriétaire
+
+        $projects = $query->orderBy('code', 'asc')->get();
+
+        // On passe les projets et les taux à la vue dashboard
         return view('dashboard', array_merge(compact('projects'), $rates));
     }
 
@@ -406,16 +418,46 @@ private function getExchangeRates()
      * Formulaire d'ajout -> form.blade.php
      */
     public function create()
-{
-    // Instance vide pour que Blade et Alpine.js lisent des valeurs neutres
-    $project = new Project();
-    
-    // Récupération des données pour les listes déroulantes
-    $pndPiliers = PndPilier::all();
-    $circonscriptions = Circonscription::all();
+    {
+        // Instance vide pour que Blade et Alpine.js lisent des valeurs neutres
+        $project = new Project();
 
-    return view('profile.menus.projects.form', compact('project', 'pndPiliers', 'circonscriptions'));
-}
+        // Récupération des données pour les listes déroulantes
+        $pndPiliers = PndPilier::all();
+        $circonscriptions = Circonscription::all();
+
+        // Récupérer les membres du comité technique pour l'assignation
+        $comiteTechniqueUsers = User::whereHas('role', function ($q) {
+            $q->whereRaw('LOWER(name) = ?', ['comite_technique']);
+        })->orderBy('name', 'asc')->get();
+
+        // Tableau vide pour l'édition (aucun utilisateur assigné à la création)
+        $selectedComites = [];
+
+        return view('profile.menus.projects.form', compact('project', 'pndPiliers', 'circonscriptions', 'comiteTechniqueUsers', 'selectedComites'));
+    }
+
+    public function edit($id)
+    {
+        // On récupère le projet avec ses composantes (modules) et ses membres du comité technique assignés
+        $project = Project::with(['modules', 'comiteTechniqueUsers'])->findOrFail($id);
+
+        // Récupération des données pour les listes déroulantes
+        $pndPiliers = PndPilier::all();
+        $circonscriptions = Circonscription::all();
+
+        // Récupérer tous les membres du comité technique
+        $comiteTechniqueUsers = User::whereHas('role', function ($q) {
+            $q->whereRaw('LOWER(name) = ?', ['comite_technique']);
+        })->orderBy('name', 'asc')->get();
+
+        // Récupérer les IDs des membres déjà assignés à ce projet pour les pré-cocher dans le formulaire
+        $selectedComites = $project->comiteTechniqueUsers->pluck('id')->toArray();
+
+        // On charge le formulaire en lui injectant le projet, les listes et les membres assignés
+        return view('profile.menus.projects.form', compact('project', 'pndPiliers', 'circonscriptions', 'comiteTechniqueUsers', 'selectedComites'));
+    }
+    
 
     /**
      * Redirection ou nettoyage de passationCreate dans ProjectController
@@ -444,19 +486,6 @@ private function getExchangeRates()
         return view('profile.menus.passation.list', compact('marches', 'roleName'));
     }
 
-    public function edit($id)
-{
-    // On récupère le projet avec ses composantes (modules)
-    $project = Project::with('modules')->findOrFail($id);
-
-    // Récupération des données pour les listes déroulantes
-    $pndPiliers = PndPilier::all();
-    $circonscriptions = Circonscription::all();
-
-    // On charge le formulaire en lui injectant le projet et les listes
-    return view('profile.menus.projects.form', compact('project', 'pndPiliers', 'circonscriptions'));
-}
-
     /**
      * Enregistre un projet, génère automatiquement son code et enregistre ses modules.
      */
@@ -478,14 +507,17 @@ private function getExchangeRates()
             'pourcentage_etat'     => 'nullable|numeric|min:0|max:100',
             'start_date'           => 'nullable|date',
             'end_date'             => 'nullable|date|after_or_equal:start_date',
-            'status'               => 'nullable|string|in:brouillon,en_cours,termine,suspendu', // <-- Validation du statut
+            'status'               => 'nullable|string|in:brouillon,en_cours,termine,suspendu',
             'pnd_pilier_id'        => 'required|exists:pnd_piliers,id',
             'circonscription_id'   => 'required|exists:circonscriptions,id',
             'modules'              => 'nullable|array',
             'modules.*.number'     => 'required',
-            'modules.*.description'=> 'required|string',
+            'modules.*.description' => 'required|string',
             'modules.*.besoin_financier' => 'required|numeric|min:0',
             'modules.*.duree'      => 'required',
+            // Validation des membres du comité technique assignés
+            'comite_users'         => 'nullable|array',
+            'comite_users.*'       => 'exists:users,id',
         ]);
 
         try {
@@ -510,7 +542,7 @@ private function getExchangeRates()
                 'budget_initial'       => $budgetInitial,
                 'budget_devise'        => $validated['budget_devise'],
                 'taux_change'          => $taux,
-                'budget_value'         => $budgetInitial * $taux, // <-- Multiplicateur corrigé ici
+                'budget_value'         => $budgetInitial * $taux,
                 'financement_bailleur' => $request->input('financement_bailleur', 0),
                 'financement_etat'     => $request->input('financement_etat', 0),
                 'pourcentage_bailleur' => $request->input('pourcentage_bailleur'),
@@ -519,11 +551,18 @@ private function getExchangeRates()
                 'end_date'             => $request->input('end_date'),
                 'pnd_pilier_id'        => $validated['pnd_pilier_id'],
                 'circonscription_id'   => $validated['circonscription_id'],
-                'status'               => $request->input('status', 'brouillon'), // <-- Utilise la valeur envoyée ou 'brouillon' par défaut
+                'status'               => $request->input('status', 'brouillon'),
                 'user_id'              => Auth::id() ?? 1,
             ];
 
             $project = Project::create($projectData);
+
+            // Synchronisation des membres du comité technique
+            if ($request->has('comite_users')) {
+                $project->comiteTechniqueUsers()->sync($request->comite_users);
+            } else {
+                $project->comiteTechniqueUsers()->detach();
+            }
 
             if ($request->filled('modules')) {
                 foreach ($request->modules as $moduleData) {
@@ -552,6 +591,9 @@ private function getExchangeRates()
     /**
      * Met à jour le projet existant.
      */
+    /**
+     * Met à jour le projet existant et synchronise ses composantes et son comité technique.
+     */
     public function update(Request $request, $id)
     {
         $validated = $request->validate([
@@ -568,14 +610,17 @@ private function getExchangeRates()
             'description'          => 'nullable|string',
             'start_date'           => 'nullable|date',
             'end_date'             => 'nullable|date|after_or_equal:start_date',
-            'status'               => 'required|string|in:brouillon,en_cours,termine,suspendu', // <-- Validation du statut
+            'status'               => 'required|string|in:brouillon,en_cours,termine,suspendu',
             'pnd_pilier_id'        => 'required|exists:pnd_piliers,id',
             'circonscription_id'   => 'required|exists:circonscriptions,id',
             'modules'              => 'nullable|array',
             'modules.*.number'     => 'required',
-            'modules.*.description'=> 'required|string',
+            'modules.*.description' => 'required|string',
             'modules.*.besoin_financier' => 'required|numeric|min:0',
             'modules.*.duree'      => 'required',
+            // Validation des membres du comité technique assignés
+            'comite_users'         => 'nullable|array',
+            'comite_users.*'       => 'exists:users,id',
         ]);
 
         try {
@@ -593,17 +638,24 @@ private function getExchangeRates()
                 'budget_initial'       => $budgetInitial,
                 'budget_devise'        => $validated['budget_devise'],
                 'taux_change'          => $taux,
-                'budget_value'         => $budgetInitial * $taux, // <-- Multiplicateur corrigé ici
+                'budget_value'         => $budgetInitial * $taux,
                 'financement_bailleur' => $request->input('financement_bailleur', 0),
                 'financement_etat'     => $request->input('financement_etat', 0),
                 'pourcentage_bailleur' => $request->input('pourcentage_bailleur'),
                 'pourcentage_etat'     => $request->input('pourcentage_etat'),
                 'start_date'           => $request->input('start_date'),
                 'end_date'             => $request->input('end_date'),
-                'status'               => $validated['status'], // <-- Mise à jour du statut
+                'status'               => $validated['status'],
                 'pnd_pilier_id'        => $validated['pnd_pilier_id'],
                 'circonscription_id'   => $validated['circonscription_id'],
             ]);
+
+            // Synchronisation des membres du comité technique
+            if ($request->has('comite_users')) {
+                $project->comiteTechniqueUsers()->sync($request->comite_users);
+            } else {
+                $project->comiteTechniqueUsers()->detach();
+            }
 
             if ($request->has('modules')) {
                 $project->modules()->delete();

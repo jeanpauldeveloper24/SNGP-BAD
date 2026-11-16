@@ -56,8 +56,8 @@
                             @forelse($candidatures as $candidature)
                             <tr>
                                 <td class="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
-                                    {{ $candidature->nom_candidat }} <br>
-                                    <span class="text-xs text-gray-500 font-normal">{{ $candidature->email-candidat }}</span>
+                                    {{ $candidature->nom_candidat ?? $candidature->company_name }} <br>
+                                    <span class="text-xs text-gray-500 font-normal">{{ $candidature->email_candidat }}</span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-gray-600">
                                     {{ $candidature->created_at->format('d/m/Y H:i') }}
@@ -82,7 +82,7 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
 
-                                    {{-- 1. BOUTON DE CONSULTATION DU DOSSIER (Sécurisé avec l'opérateur nullsafe) --}}
+                                    {{-- 1. BOUTON DE CONSULTATION DU DOSSIER --}}
                                     <a href="{{ route('pages.candidature-form', $candidature->market?->id ?? $candidature->market_id) }}"
                                         class="text-gray-600 hover:text-gray-900 bg-gray-100 px-3 py-1.5 rounded-lg transition text-xs">
                                         Voir l'offre
@@ -91,7 +91,7 @@
                                     {{-- 2. BOUTON / MODALE RÉSERVÉ AU COMITÉ TECHNIQUE --}}
                                     @if(Auth::user()->role->name === 'comite_technique')
                                     <button type="button"
-                                        onclick="openEvaluationModal('{{ $candidature->id }}', '{{ addslashes($candidature->company_name ?? $candidature->name) }}', '{{ $candidature->statut_candidature }}', '{{ $candidature->statut_marche }}', '{{ addslashes($candidature->motif_statut ?? '') }}')"
+                                        onclick="openEvaluationModal('{{ $candidature->id }}', '{{ addslashes($candidature->nom_candidat ?? $candidature->company_name) }}', '{{ $candidature->statut_candidature }}', '{{ $candidature->statut_marche }}', '{{ addslashes($candidature->motif_statut ?? '') }}')"
                                         class="text-white bg-[#27AE60] hover:bg-green-700 px-3 py-1.5 rounded-lg transition text-xs font-bold shadow-sm">
                                         Arbitrer / Évaluer
                                     </button>

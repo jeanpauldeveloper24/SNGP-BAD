@@ -8,7 +8,7 @@
     <div class="py-12" x-data="marcheForm(@js($projects))">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
-                
+
                 <div class="mb-6">
                     <h1 class="text-2xl font-bold text-gray-800">Nouveau marché public</h1>
                     <p class="text-gray-600">Renseignez les informations générales, le rattachement au projet et les spécifications du marché.</p>
@@ -39,7 +39,7 @@
                                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
                                 <option value="">-- Sélectionner un projet --</option>
                                 @foreach($projects as $project)
-                                    <option value="{{ $project->id }}">{{ $project->code }} - {{ $project->nom }}</option>
+                                <option value="{{ $project->id }}">{{ $project->code }} - {{ $project->nom }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -128,7 +128,7 @@
                                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
                                 <option value="">-- Aucun titulaire (Non attribué) --</option>
                                 @foreach($prestataires as $prestataire)
-                                    <option value="{{ $prestataire->id }}">{{ $prestataire->name }}</option>
+                                <option value="{{ $prestataire->id }}">{{ $prestataire->name }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -218,12 +218,18 @@
                 selectedModuleId: '',
                 availableModules: [],
                 besoinFinancier: 0,
-                items: [
-                    { designation: '', quantite: '', specification: '' }
-                ],
+                items: [{
+                    designation: '',
+                    quantite: '',
+                    specification: ''
+                }],
 
                 addItem() {
-                    this.items.push({ designation: '', quantite: '', specification: '' });
+                    this.items.push({
+                        designation: '',
+                        quantite: '',
+                        specification: ''
+                    });
                 },
 
                 removeItem(index) {

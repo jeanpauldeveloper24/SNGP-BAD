@@ -4,8 +4,8 @@
 
             <div class="flex items-center space-x-3">
                 <div class="flex items-center space-x-2">
-                    <x-application-logo type="app" class="h-10 w-auto" />
-                    <span class="font-bold text-xl text-[#1B4F72]">SNGP - BAD</span>
+<img src="{{ asset('images/logo_sngp.jpeg') }}" alt="SNGP Logo" class="h-8 w-auto object-contain">
+                <span class="font-bold text-xl text-[#1B4F72]">SNGP - BAD</span>
                 </div>
             </div>
 

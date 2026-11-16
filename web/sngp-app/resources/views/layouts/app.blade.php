@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
+    <link rel="icon" type="image/jpeg" href="{{ asset('images/icon_sngp.jpeg') }}">
+
     <title>{{ config('app.name', 'SNGP-BAD') }}</title>
 
     <link rel="preconnect" href="https://fonts.bunny.net">
@@ -22,6 +24,8 @@
 
             <header class="bg-white h-20 shadow-sm flex items-center px-8 border-b border-gray-200 sticky top-0 z-40">
                 <div class="flex justify-between items-center w-full">
+
+                <img src="{{ asset('images/logo_sngp.jpeg') }}" alt="SNGP Logo" class="h-8 w-auto object-contain">
 
                     <h2 class="font-bold text-xl text-[#1B4F72] uppercase tracking-wide">
                         {{ $header ?? 'Tableau de bord' }}

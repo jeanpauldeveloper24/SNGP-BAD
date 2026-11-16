@@ -92,9 +92,21 @@
                                 <option value="travaux" {{ old('categorie', $project->categorie ?? '') == 'travaux' ? 'selected' : '' }}>Travaux (TRV)</option>
                                 <option value="fournitures" {{ old('categorie', $project->categorie ?? '') == 'fournitures' ? 'selected' : '' }}>Fournitures (FRN)</option>
                                 <option value="services_courants" {{ old('categorie', $project->categorie ?? '') == 'services_courants' ? 'selected' : '' }}>Services courants (SVC)</option>
-                                <option value="prestations_intellectuelles" {{ old('categorie', $project->categorie ?? '') == 'prestations_intellectuelles' ? 'selected' : '' }}>Prestations intellectuelles (INT)</option>
+                                <option value="prestations_intellectuelles" {{ old('categorie', $project->categorie ?? '') == 'conseil_technique' ? 'selected' : '' }}>Conseil Technique (CT)</option>
                             </select>
                             @error('categorie') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Membres du Comité Technique assignés au projet</label>
+                            <select name="comite_users[]" multiple class="w-full rounded-lg border-gray-300 text-sm shadow-sm">
+                                @foreach($comiteTechniqueUsers as $user)
+                                <option value="{{ $user->id }}" {{ in_array($user->id, old('comite_users', $selectedComites ?? [])) ? 'selected' : '' }}>
+                                    {{ $user->name }} ({{ $user->email }})
+                                </option>
+                                @endforeach
+                            </select>
+                            <p class="text-xs text-gray-500 mt-1">Maintenez Ctrl (ou Cmd) pour en sélectionner plusieurs.</p>
                         </div>
 
                         {{-- Description --}}
@@ -104,59 +116,59 @@
                         </div>
 
                         <div>
-    <label for="status" class="block text-xs font-semibold text-gray-700 uppercase">
-        Statut du Projet <span class="text-red-500">*</span>
-    </label>
-    <select name="status" id="status" class="mt-1 block w-full text-xs rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700" required>
-        <option value="brouillon" {{ old('status', $project->status ?? '') == 'brouillon' ? 'selected' : '' }}>Brouillon</option>
-        <option value="en_cours" {{ old('status', $project->status ?? '') == 'en_cours' ? 'selected' : '' }}>En cours</option>
-        <option value="suspendu" {{ old('status', $project->status ?? '') == 'suspendu' ? 'selected' : '' }}>Suspendu</option>
-        <option value="termine" {{ old('status', $project->status ?? '') == 'termine' ? 'selected' : '' }}>Terminé</option>
-    </select>
-    @error('status') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-</div>
+                            <label for="status" class="block text-xs font-semibold text-gray-700 uppercase">
+                                Statut du Projet <span class="text-red-500">*</span>
+                            </label>
+                            <select name="status" id="status" class="mt-1 block w-full text-xs rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700" required>
+                                <option value="brouillon" {{ old('status', $project->status ?? '') == 'brouillon' ? 'selected' : '' }}>Brouillon</option>
+                                <option value="en_cours" {{ old('status', $project->status ?? '') == 'en_cours' ? 'selected' : '' }}>En cours</option>
+                                <option value="suspendu" {{ old('status', $project->status ?? '') == 'suspendu' ? 'selected' : '' }}>Suspendu</option>
+                                <option value="termine" {{ old('status', $project->status ?? '') == 'termine' ? 'selected' : '' }}>Terminé</option>
+                            </select>
+                            @error('status') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                        </div>
 
                     </div>
                 </div>
 
                 {{-- SECTION 2 : Localisation Administrative --}}
                 <div class="space-y-4">
-    <h5 class="text-secondary border-bottom pb-2 mb-3 mt-4 text-sm font-bold uppercase text-gray-800">2. Cadre Stratégique & Localisation</h5>
+                    <h5 class="text-secondary border-bottom pb-2 mb-3 mt-4 text-sm font-bold uppercase text-gray-800">2. Cadre Stratégique & Localisation</h5>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <!-- Pilier PND -->
-        <div>
-            <label for="pnd_pilier_id" class="block text-xs font-semibold text-gray-700 uppercase">
-                Pilier PND <span class="text-red-500">*</span>
-            </label>
-            <select name="pnd_pilier_id" id="pnd_pilier_id" class="mt-1 block w-full text-xs rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700" required>
-                <option value="" disabled {{ old('pnd_pilier_id', $project->pnd_pilier_id ?? '') == '' ? 'selected' : '' }}>-- Sélectionner un pilier du PND --</option>
-                @foreach($pndPiliers ?? [] as $pilier)
-                    <option value="{{ $pilier->id }}" {{ (old('pnd_pilier_id', $project->pnd_pilier_id ?? '') == $pilier->id) ? 'selected' : '' }}>
-                        Pilier {{ $pilier->numero }} : {{ $pilier->libelle }}
-                    </option>
-                @endforeach
-            </select>
-            @error('pnd_pilier_id') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-        </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Pilier PND -->
+                        <div>
+                            <label for="pnd_pilier_id" class="block text-xs font-semibold text-gray-700 uppercase">
+                                Pilier PND <span class="text-red-500">*</span>
+                            </label>
+                            <select name="pnd_pilier_id" id="pnd_pilier_id" class="mt-1 block w-full text-xs rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700" required>
+                                <option value="" disabled {{ old('pnd_pilier_id', $project->pnd_pilier_id ?? '') == '' ? 'selected' : '' }}>-- Sélectionner un pilier du PND --</option>
+                                @foreach($pndPiliers ?? [] as $pilier)
+                                <option value="{{ $pilier->id }}" {{ (old('pnd_pilier_id', $project->pnd_pilier_id ?? '') == $pilier->id) ? 'selected' : '' }}>
+                                    Pilier {{ $pilier->numero }} : {{ $pilier->libelle }}
+                                </option>
+                                @endforeach
+                            </select>
+                            @error('pnd_pilier_id') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                        </div>
 
-        <!-- Circonscription Administrative -->
-        <div>
-            <label for="circonscription_id" class="block text-xs font-semibold text-gray-700 uppercase">
-                Circonscription Administrative <span class="text-red-500">*</span>
-            </label>
-            <select name="circonscription_id" id="circonscription_id" class="mt-1 block w-full text-xs rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700" required>
-                <option value="" disabled {{ old('circonscription_id', $project->circonscription_id ?? '') == '' ? 'selected' : '' }}>-- Sélectionner une circonscription --</option>
-                @foreach($circonscriptions ?? [] as $circonscription)
-                    <option value="{{ $circonscription->id }}" {{ (old('circonscription_id', $project->circonscription_id ?? '') == $circonscription->id) ? 'selected' : '' }}>
-                        {{ $circonscription->nom }} ({{ ucfirst($circonscription->type) }})
-                    </option>
-                @endforeach
-            </select>
-            @error('circonscription_id') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
-        </div>
-    </div>
-</div>
+                        <!-- Circonscription Administrative -->
+                        <div>
+                            <label for="circonscription_id" class="block text-xs font-semibold text-gray-700 uppercase">
+                                Circonscription Administrative <span class="text-red-500">*</span>
+                            </label>
+                            <select name="circonscription_id" id="circonscription_id" class="mt-1 block w-full text-xs rounded-md border-gray-300 shadow-sm focus:border-cyan-700 focus:ring-cyan-700" required>
+                                <option value="" disabled {{ old('circonscription_id', $project->circonscription_id ?? '') == '' ? 'selected' : '' }}>-- Sélectionner une circonscription --</option>
+                                @foreach($circonscriptions ?? [] as $circonscription)
+                                <option value="{{ $circonscription->id }}" {{ (old('circonscription_id', $project->circonscription_id ?? '') == $circonscription->id) ? 'selected' : '' }}>
+                                    {{ $circonscription->nom }} ({{ ucfirst($circonscription->type) }})
+                                </option>
+                                @endforeach
+                            </select>
+                            @error('circonscription_id') <p class="mt-1 text-xs text-red-600">{{ $message }}</p> @enderror
+                        </div>
+                    </div>
+                </div>
 
                 {{-- SECTION 3 : Cadrage Financier & Calendrier --}}
                 <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-6" x-data="{

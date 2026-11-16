@@ -25,6 +25,8 @@
             <div class="absolute inset-0 z-10 bg-gradient-to-b from-[#1B4F72]/60 to-[#1B4F72]/90"></div>
 
             <div class="relative z-20 text-white max-w-lg">
+                <img src="{{ asset('images/logo_sngp.jpeg') }}" alt="SNGP Logo" class="h-8 w-auto object-contain">
+
                 <h1 class="text-5xl font-bold font-montserrat mb-6 leading-tight uppercase tracking-tighter">
                     SNGP-BAD
                 </h1>

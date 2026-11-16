@@ -9,6 +9,7 @@ $roleName = Auth::user()->role ? strtolower(Auth::user()->role->name) : '';
 
     <div class="flex items-center px-6 h-20 bg-[#0d2a3d] shrink-0 border-b border-white/5">
         <a href="{{ url('/') }}" class="flex items-center gap-3">
+            <img src="{{ asset('images/logo_sngp.jpeg') }}" alt="SNGP Logo" class="h-8 w-auto object-contain">
             <span class="font-montserrat font-bold text-xl tracking-tighter text-white">SN<span class="text-[#27AE60]">GP</span></span>
         </a>
     </div>
@@ -171,13 +172,15 @@ $roleName = Auth::user()->role ? strtolower(Auth::user()->role->name) : '';
         </div>
         @endif
 
-        @if(in_array($roleName, ['specialiste_marche', 'ugp', 'ordonnateur', 'administrateur_systeme']))
         <div class="mb-6">
             <p class="text-[10px] font-bold text-white/40 uppercase px-3 mb-2 tracking-widest">Marchés Publics</p>
 
+            @if(in_array($roleName, ['specialiste_marche', 'ugp', 'ordonnateur', 'administrateur_systeme']))
             <a href="{{ route('passation.index') }}" class="flex items-center p-3 rounded-lg text-white/70 hover:bg-[#2E86C1] hover:text-white transition-all {{ request()->routeIs('passation.index') || request()->routeIs('passation.edit-etape') ? 'bg-[#2E86C1] text-white font-semibold' : '' }}">
                 <span class="text-sm">Suivi des DAO</span>
             </a>
+            @endif
+
 
             @if(in_array($roleName, ['ugp', 'comite_technique', 'ordonnateur', 'administrateur_systeme']))
             <a href="{{ route('menus.candidatures.liste') }}" class="flex items-center p-3 rounded-lg text-white/70 hover:bg-[#2E86C1] hover:text-white transition-all {{ request()->routeIs('menus.candidatures.liste') ? 'bg-[#2E86C1] text-white' : '' }}">
@@ -185,7 +188,6 @@ $roleName = Auth::user()->role ? strtolower(Auth::user()->role->name) : '';
             </a>
             @endif
         </div>
-        @endif
 
         <div class="mb-6 pt-4 border-t border-white/10">
             <p class="text-[10px] font-bold text-[#27AE60] uppercase px-3 mb-2 tracking-widest">Communication</p>

@@ -42,13 +42,13 @@ class MarketController extends Controller
                     'id'      => $proj->id,
                     'code'    => $proj->code ?? 'PRJ-' . $proj->id,
                     'nom'     => $proj->nom,
-                    'title'   => $proj->nom, // Ajout de la propriété 'title'
+                    'title'   => $proj->nom,
                     'modules' => $proj->modules->map(function ($mod) {
                         return (object) [
                             'id'               => $mod->id,
                             'description'      => $mod->description,
                             'nom'              => $mod->description,
-                            'title'            => $mod->description, // Ajout pour les modules si besoin
+                            'title'            => $mod->description,
                             'besoin_financier' => $mod->besoin_financier ?? 0,
                         ];
                     }),
@@ -59,9 +59,15 @@ class MarketController extends Controller
             $q->whereRaw('LOWER(name) = ?', ['prestataire']);
         })->select('id', 'name')->orderBy('name', 'asc')->get();
 
+        // 1. Récupérer les membres du comité technique pour l'assignation
+        $comiteTechniqueUsers = User::whereHas('role', function ($q) {
+            $q->whereRaw('LOWER(name) = ?', ['comite_technique']);
+        })->select('id', 'name', 'email')->orderBy('name', 'asc')->get();
+
         $marche = new Market();
 
-        return view('profile.menus.marche-form', compact('projects', 'prestataires', 'marche'));
+        // 2. Ajouter $comiteTechniqueUsers dans le compact
+        return view('profile.menus.marche-form', compact('projects', 'prestataires', 'marche', 'comiteTechniqueUsers'));
     }
     /**
      * Formulaire d'ÉDITION du CYCLE DE VIE

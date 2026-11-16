@@ -5,7 +5,7 @@
         'dsid' => ['src' => 'images/logo-dsid.jpg',    'alt' => 'Logo DSID'],
         'bad'  => ['src' => 'images/logo-bad.png',     'alt' => 'Logo BAD'],
         'ci'   => ['src' => 'images/armoirie-ci.png',  'alt' => 'Armoiries Côte d\'Ivoire'],
-        'app'  => ['src' => 'images/logo-app.png',     'alt' => 'Logo Application'],
+        'app'  => ['src' => 'images/logo-sngp.png',     'alt' => 'Logo sngp'],
     ];
 
     $selected = $logos[$type] ?? $logos['app'];

@@ -69,4 +69,9 @@ class User extends Authenticatable
         // On vérifie si l'utilisateur a un rôle chargé et si son nom correspond
         return $this->role && $this->role->name === $roleName;
     }
+
+    public function assignedProjects()
+{
+    return $this->belongsToMany(Project::class, 'project_user', 'user_id', 'project_id');
+}
 }
