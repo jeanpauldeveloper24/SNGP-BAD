@@ -82,12 +82,6 @@
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
 
-                                    {{-- 1. BOUTON DE CONSULTATION DU DOSSIER --}}
-                                    <a href="{{ route('pages.candidature-form', $candidature->market?->id ?? $candidature->market_id) }}"
-                                        class="text-gray-600 hover:text-gray-900 bg-gray-100 px-3 py-1.5 rounded-lg transition text-xs">
-                                        Voir l'offre
-                                    </a>
-
                                     {{-- 2. BOUTON / MODALE RÉSERVÉ AU COMITÉ TECHNIQUE --}}
                                     @if(Auth::user()->role->name === 'comite_technique')
                                     <button type="button"

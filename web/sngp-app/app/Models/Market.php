@@ -20,6 +20,8 @@ class Market extends Model
         'created_by',
         'objet',
         'methode_passation',
+        'comite_depouillement',
+        'comite_analyse',
         'etape',
         'status',
         'besoin_financier',
@@ -27,20 +29,34 @@ class Market extends Model
         'devise',
         'candidature_start_date',
         'candidature_end_date',
+        'date_attribution_provisoire',
+        'fin_periode_contestation',
+        'date_attribution_definitive',
+        'sous_recours_anrmp',
+        'statut_recours_anrmp',
+        'motif_recours_anrmp',
+        'date_attestation_bonne_execution',
     ];
 
     /**
      * Transtypage automatique des attributs.
      */
     protected $casts = [
-        'besoins_materiels'      => 'array',
-        'besoin_financier'       => 'decimal:2',
-        'candidature_start_date' => 'date',
-        'candidature_end_date'   => 'date',
+        'besoins_materiels'                 => 'array',
+        'comite_depouillement'              => 'array',
+        'comite_analyse'                    => 'array',
+        'besoin_financier'                  => 'decimal:2',
+        'candidature_start_date'            => 'date',
+        'candidature_end_date'              => 'date',
+        'date_attribution_provisoire'       => 'date',
+        'fin_periode_contestation'          => 'date',
+        'date_attribution_definitive'       => 'date',
+        'date_attestation_bonne_execution'  => 'date',
+        'sous_recours_anrmp'                => 'boolean',
     ];
 
     /**
-     * Libellé propre de l'étape.
+     * Libellé propre de l'étape institutionnelle.
      */
     public function getEtapeActuelleLibelleAttribute(): string
     {
@@ -49,15 +65,15 @@ class Market extends Model
             'REDACTION_DAO'          => '02 - Rédaction du DAO',
             'VALIDATION_DGMP'        => '03 - Validation DGMP',
             'PUBLICATION_AVIS'       => "04 - Publication de l'Avis",
-            'RECEPTION_OFFRES'       => '05 - Réception des offres',
-            'OUVERTURE_PLIS'         => '06 - Ouverture des plis',
-            'EVALUATION_TECHNIQUE'   => '07 - Évaluation Technique',
-            'ATTRIBUTION_PROVISOIRE' => '08 - Attribution Provisoire',
-            'SIGNATURE_CONTRAT'     => '09 - Signature du Contrat',
-            'ORDRE_SERVICE'          => '10 - Ordre de Service (OS)',
-            'PREMIER_VERSEMENT'      => '11 - 1er versement',
+            'RECEPTION_OFFRES'       => '05 - Réception & Dépouillement public (Comité de Dépouillement COJO)',
+            'EVALUATION_TECHNIQUE'   => '06 - Analyse des offres en huis clos (Comité d\'Analyse COJO)',
+            'ATTRIBUTION_PROVISOIRE' => '07 - Attribution Provisoire (COJO)',
+            'PERIODE_CONTESTATION'   => '08 - Période de Contestation ANRMPCI (7 jours)',
+            'ATTRIBUTION_DEFINITIVE' => '09 - Attribution Définitive (COJO)',
+            'SIGNATURE_CONTRAT'      => '10 - Signature du Contrat',
+            'ORDRE_SERVICE'          => '11 - Ordre de Service (OS)',
             'EXECUTION_TRAVAUX'      => '12 - Exécution des travaux',
-            'SECOND_VERSEMENT'       => '13 - 2nd versement',
+            'ATTESTATION_EXECUTION'  => '13 - Délivrance de l\'Attestation de Bonne Exécution',
             'RECEPTION_DEFINITIVE'   => '14 - Réception définitive',
         ];
 
@@ -96,22 +112,17 @@ class Market extends Model
         $montant = $this->besoin_financier ?? 0;
         $devise = strtoupper($this->devise ?? 'USD');
 
-        // Si c'est déjà en FCFA/XOF, pas besoin de conversion
         if (in_array($devise, ['XOF', 'FCFA'])) {
             return $montant;
         }
 
-        // Taux de repli par défaut (utilisé instantanément si l'API est injoignable)
         $tauxUsdXof = 600;
         $tauxUsdEur = 0.92;
 
         try {
-            // Récupération des taux via le cache (sécurisé)
             $rates = Cache::remember('exchange_rates_cfa', 86400, function () {
                 try {
                     $apiKey = env('EXCHANGERATE_API_KEY');
-
-                    // Appel HTTP avec un délai d'attente strict de 2 secondes max
                     $response = Http::withoutVerifying()
                         ->timeout(2)
                         ->get("https://v6.exchangerate-api.com/v6/{$apiKey}/latest/USD");
@@ -121,9 +132,8 @@ class Market extends Model
                         return $data['conversion_rates'] ?? [];
                     }
                 } catch (\Exception $e) {
-                    // Ignore l'erreur réseau pour basculer sur le repli
+                    // Repli par défaut
                 }
-
                 return [];
             });
 
@@ -132,10 +142,9 @@ class Market extends Model
                 $tauxUsdEur = $rates['EUR'] ?? 0.92;
             }
         } catch (\Exception $e) {
-            // Sécurité globale contre toute exception inattendue
+            // Sécurité globale
         }
 
-        // Calcul de la conversion avec la multiplication correcte
         if ($devise === 'USD') {
             return $montant * $tauxUsdXof;
         }

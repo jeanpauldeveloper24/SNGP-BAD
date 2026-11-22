@@ -1,17 +1,17 @@
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            Nouveau marché public
+            Nouveau marché public (Gouvernance COJO & ANRMPCI)
         </h2>
     </x-slot>
 
-    <div class="py-12" x-data="marcheForm(@js($projects))">
+    <div class="py-12" x-data="marcheForm(@js($projects), @js($cojoUsers ?? []))">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
 
                 <div class="mb-6">
                     <h1 class="text-2xl font-bold text-gray-800">Nouveau marché public</h1>
-                    <p class="text-gray-600">Renseignez les informations générales, le rattachement au projet et les spécifications du marché.</p>
+                    <p class="text-gray-600">Renseignez les informations générales, la configuration des sous-comités COJO et les spécifications.</p>
                 </div>
 
                 <form action="{{ route('passation.store') }}" method="POST" class="space-y-6">
@@ -78,15 +78,15 @@
                                 <option value="REDACTION_DAO">02 - Rédaction du DAO</option>
                                 <option value="VALIDATION_DGMP">03 - Validation DGMP</option>
                                 <option value="PUBLICATION_AVIS">04 - Publication de l'Avis</option>
-                                <option value="RECEPTION_OFFRES">05 - Réception des offres</option>
-                                <option value="OUVERTURE_PLIS">06 - Ouverture des plis</option>
-                                <option value="EVALUATION_TECHNIQUE">07 - Évaluation Technique</option>
-                                <option value="ATTRIBUTION_PROVISOIRE">08 - Attribution Provisoire</option>
-                                <option value="SIGNATURE_CONTRAT">09 - Signature du Contrat</option>
-                                <option value="ORDRE_SERVICE">10 - Ordre de Service (OS)</option>
-                                <option value="PREMIER_VERSEMENT">11 - 1er versement</option>
+                                <option value="RECEPTION_OFFRES">05 - Réception & Dépouillement (Comité de Dépouillement COJO)</option>
+                                <option value="EVALUATION_TECHNIQUE">06 - Analyse des offres (Comité d'Analyse COJO)</option>
+                                <option value="ATTRIBUTION_PROVISOIRE">07 - Attribution Provisoire (COJO)</option>
+                                <option value="PERIODE_CONTESTATION">08 - Période de recours ANRMPCI (7 jours)</option>
+                                <option value="ATTRIBUTION_DEFINITIVE">09 - Attribution Définitive</option>
+                                <option value="SIGNATURE_CONTRAT">10 - Signature du Contrat</option>
+                                <option value="ORDRE_SERVICE">11 - Ordre de Service (OS)</option>
                                 <option value="EXECUTION_TRAVAUX">12 - Exécution des travaux</option>
-                                <option value="SECOND_VERSEMENT">13 - 2nd versement</option>
+                                <option value="ATTESTATION_EXECUTION">13 - Attestation de Bonne Exécution</option>
                                 <option value="RECEPTION_DEFINITIVE">14 - Réception définitive</option>
                             </select>
                         </div>
@@ -109,31 +109,7 @@
                             </select>
                         </div>
 
-                        <!-- Statut d'Attribution -->
-                        <div>
-                            <label for="statut" class="block text-sm font-medium text-gray-700">Statut d'Attribution</label>
-                            <select name="statut" id="statut"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
-                                <option value="Non attribué">Non attribué</option>
-                                <option value="En cours d'attribution">En cours d'attribution</option>
-                                <option value="Attribué">Attribué</option>
-                                <option value="Annulé">Annulé</option>
-                            </select>
-                        </div>
-
-                        <!-- Titulaire / Prestataire Adjugé -->
-                        <div>
-                            <label for="prestataire_id" class="block text-sm font-medium text-gray-700">Titulaire / Prestataire Adjugé</label>
-                            <select name="prestataire_id" id="prestataire_id"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
-                                <option value="">-- Aucun titulaire (Non attribué) --</option>
-                                @foreach($prestataires as $prestataire)
-                                <option value="{{ $prestataire->id }}">{{ $prestataire->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        <!-- Date de Dépôt (Début) -->
+                        <!-- Date de Début (Dépôt) -->
                         <div>
                             <label for="date_debut" class="block text-sm font-medium text-gray-700">Date de Dépôt (Début)</label>
                             <input type="date" name="date_debut" id="date_debut"
@@ -148,6 +124,56 @@
                         </div>
                     </div>
 
+                    <!-- ================= GOUVERNANCE COJO (Sous-Comités) ================= -->
+                    <div class="pt-6 border-t border-gray-200 space-y-6">
+                        <div class="bg-indigo-50 p-4 rounded-lg border border-indigo-100">
+                            <h3 class="text-md font-bold text-indigo-900 mb-1">Composition de la COJO (Comité d'Ouverture et de Jugement des Offres)</h3>
+                            <p class="text-xs text-indigo-700">Définissez la composition des deux sous-comités réglementaires.</p>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Comité de Dépouillement -->
+                            <div class="p-4 bg-gray-50 rounded-lg border border-gray-200 space-y-4">
+                                <h4 class="font-bold text-sm text-gray-800 border-b pb-2">Comité de Dépouillement (En présence des candidats)</h4>
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-700">Président du Dépouillement</label>
+                                    <input type="text" name="comite_depouillement[president]" placeholder="Nom et Prénoms"
+                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-xs">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-700">Secrétaire</label>
+                                    <input type="text" name="comite_depouillement[secretaire]" placeholder="Nom et Prénoms"
+                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-xs">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-700">Membres (séparés par des virgules)</label>
+                                    <input type="text" name="comite_depouillement[membres]" placeholder="Membre 1, Membre 2..."
+                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-xs">
+                                </div>
+                            </div>
+
+                            <!-- Comité d'Analyse -->
+                            <div class="p-4 bg-gray-50 rounded-lg border border-gray-200 space-y-4">
+                                <h4 class="font-bold text-sm text-gray-800 border-b pb-2">Comité d'Analyse (Huis clos)</h4>
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-700">Président de l'Analyse</label>
+                                    <input type="text" name="comite_analyse[president]" placeholder="Nom et Prénoms"
+                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-xs">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-700">Secrétaire</label>
+                                    <input type="text" name="comite_analyse[secretaire]" placeholder="Nom et Prénoms"
+                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-xs">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-700">Membres (séparés par des virgules)</label>
+                                    <input type="text" name="comite_analyse[membres]" placeholder="Membre 1, Membre 2..."
+                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-xs">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Spécifications techniques (Formulaire Tableau JSON) -->
                     <div class="pt-4 border-t border-gray-200">
                         <div class="flex justify-between items-center mb-3">
@@ -157,7 +183,6 @@
                             </button>
                         </div>
 
-                        <!-- Hidden Input envoyé au Controller en JSON -->
                         <input type="hidden" name="specifications" :value="JSON.stringify(items)">
 
                         <div class="overflow-x-auto">
@@ -174,16 +199,16 @@
                                     <template x-for="(item, index) in items" :key="index">
                                         <tr>
                                             <td class="px-3 py-2">
-                                                <input type="text" x-model="item.designation" placeholder="Ex: Panneaux Solaires 550Wp"
-                                                    class="w-full text-xs rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                                <input type="text" x-model="item.designation" placeholder="Ex: Panneaux Solaires"
+                                                    class="w-full text-xs rounded-md border-gray-300 shadow-sm">
                                             </td>
                                             <td class="px-3 py-2">
                                                 <input type="text" x-model="item.quantite" placeholder="Ex: 2400 unités"
-                                                    class="w-full text-xs rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                                    class="w-full text-xs rounded-md border-gray-300 shadow-sm">
                                             </td>
                                             <td class="px-3 py-2">
-                                                <input type="text" x-model="item.specification" placeholder="Ex: Rendement 21.3%, Garantie 25 ans"
-                                                    class="w-full text-xs rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                                <input type="text" x-model="item.specification" placeholder="Ex: Rendement 21.3%"
+                                                    class="w-full text-xs rounded-md border-gray-300 shadow-sm">
                                             </td>
                                             <td class="px-3 py-2 text-center">
                                                 <button type="button" @click="removeItem(index)" class="text-red-600 hover:text-red-900 font-bold text-sm">
@@ -200,7 +225,7 @@
                     <!-- Actions -->
                     <div class="flex items-center justify-start space-x-4 pt-4 border-t border-gray-200">
                         <a href="{{ url()->previous() }}" class="text-sm text-gray-600 hover:text-gray-900 underline">Annuler</a>
-                        <button type="submit" class="px-4 py-2 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700 active:bg-indigo-900 focus:outline-none focus:border-indigo-900 focus:ring ring-indigo-300 disabled:opacity-25 transition">
+                        <button type="submit" class="px-4 py-2 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700">
                             Enregistrer le marché
                         </button>
                     </div>
@@ -218,18 +243,10 @@
                 selectedModuleId: '',
                 availableModules: [],
                 besoinFinancier: 0,
-                items: [{
-                    designation: '',
-                    quantite: '',
-                    specification: ''
-                }],
+                items: [{ designation: '', quantite: '', specification: '' }],
 
                 addItem() {
-                    this.items.push({
-                        designation: '',
-                        quantite: '',
-                        specification: ''
-                    });
+                    this.items.push({ designation: '', quantite: '', specification: '' });
                 },
 
                 removeItem(index) {
@@ -240,22 +257,14 @@
 
                 onProjectChange() {
                     const proj = this.projects.find(p => String(p.id) === String(this.selectedProjectId));
-                    if (proj && proj.modules) {
-                        this.availableModules = proj.modules;
-                    } else {
-                        this.availableModules = [];
-                    }
+                    this.availableModules = (proj && proj.modules) ? proj.modules : [];
                     this.selectedModuleId = '';
                     this.besoinFinancier = 0;
                 },
 
                 onModuleChange() {
                     const mod = this.availableModules.find(m => String(m.id) === String(this.selectedModuleId));
-                    if (mod) {
-                        this.besoinFinancier = mod.besoin_financier || 0;
-                    } else {
-                        this.besoinFinancier = 0;
-                    }
+                    this.besoinFinancier = mod ? (mod.besoin_financier || 0) : 0;
                 }
             };
         }

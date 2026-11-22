@@ -59,16 +59,16 @@ class MarketController extends Controller
             $q->whereRaw('LOWER(name) = ?', ['prestataire']);
         })->select('id', 'name')->orderBy('name', 'asc')->get();
 
-        // 1. Récupérer les membres du comité technique pour l'assignation
-        $comiteTechniqueUsers = User::whereHas('role', function ($q) {
-            $q->whereRaw('LOWER(name) = ?', ['comite_technique']);
+        // Récupération des utilisateurs habilités pour la COJO (Membres, Présidents, Secrétaires)
+        $cojoUsers = User::whereHas('role', function ($q) {
+            $q->whereIn('name', ['cojo_depouillement', 'cojo_analyse', 'cojo']);
         })->select('id', 'name', 'email')->orderBy('name', 'asc')->get();
 
         $marche = new Market();
 
-        // 2. Ajouter $comiteTechniqueUsers dans le compact
-        return view('profile.menus.marche-form', compact('projects', 'prestataires', 'marche', 'comiteTechniqueUsers'));
+        return view('profile.menus.marche-form', compact('projects', 'prestataires', 'marche', 'cojoUsers'));
     }
+
     /**
      * Formulaire d'ÉDITION du CYCLE DE VIE
      */
@@ -113,7 +113,7 @@ class MarketController extends Controller
      */
     public function store(Request $request)
     {
-        // 1. Harmonisation des nommages provenant du formulaire Blade / Alpine.js
+        // 1. Harmonisation des nommages provenant du formulaire
         $request->merge([
             'numero_reference'       => $request->input('numero_reference', $request->input('reference')),
             'project_module_id'      => $request->input('project_module_id', $request->input('module_id')),
@@ -125,7 +125,7 @@ class MarketController extends Controller
             'etape'                  => $request->input('etape', $request->input('etape_actuelle', 'EXPRESSION_BESOIN')),
         ]);
 
-        // 2. Décodage de la chaîne JSON (specifications ou besoins_materiels)
+        // 2. Décodage de la chaîne JSON (besoins_materiels / specifications)
         $specificationsInput = $request->input('specifications', $request->input('besoins_materiels'));
         if (is_string($specificationsInput)) {
             $decoded = json_decode($specificationsInput, true);
@@ -134,17 +134,30 @@ class MarketController extends Controller
             ]);
         }
 
-        // 3. Récupération des modèles associés pour les validations personnalisées
+        // 3. Récupération des modèles associés
         $project = Project::find($request->input('project_id'));
         $module  = ProjectModule::find($request->input('project_module_id'));
 
-        // 4. Validation stricte des données
+        // 4. Validation stricte incluant COJO et ANRMPCI
         $validated = $request->validate([
-            'numero_reference'  => 'nullable|string|max:255',
-            'project_id'        => 'required|exists:projects,id',
-            'project_module_id' => 'nullable|exists:project_modules,id',
-            'objet'             => 'required|string|max:255',
-            'methode_passation' => 'nullable|string',
+            'numero_reference'                  => 'nullable|string|max:255',
+            'project_id'                        => 'required|exists:projects,id',
+            'project_module_id'                 => 'nullable|exists:project_modules,id',
+            'objet'                             => 'required|string|max:255',
+            'methode_passation'                 => 'nullable|string',
+            
+            // Validation COJO (Sous-comités stockés en JSON)
+            'comite_depouillement'              => 'nullable|array',
+            'comite_analyse'                    => 'nullable|array',
+
+            // Jalons d'attribution et recours ANRMPCI
+            'date_attribution_provisoire'       => 'nullable|date',
+            'fin_periode_contestation'          => 'nullable|date|after_or_equal:date_attribution_provisoire',
+            'date_attribution_definitive'       => 'nullable|date',
+            'sous_recours_anrmp'                => 'boolean',
+            'statut_recours_anrmp'              => 'nullable|string',
+            'motif_recours_anrmp'               => 'nullable|string',
+            'date_attestation_bonne_execution'  => 'nullable|date',
 
             // Validation du budget disponible sur le module
             'besoin_financier'  => [
@@ -166,13 +179,11 @@ class MarketController extends Controller
                 },
             ],
 
-            // Validation du tableau de la proposition technique
             'besoins_materiels'                 => 'required|array|min:1',
             'besoins_materiels.*.designation'   => 'required|string',
-            'besoins_materiels.*.quantite'      => 'required|string', // Format texte pour accepter "12 sessions", "1 prestation", etc.
+            'besoins_materiels.*.quantite'      => 'required|string',
             'besoins_materiels.*.specification' => 'nullable|string',
 
-            // Validation des dates par rapport aux contraintes du projet
             'candidature_start_date' => [
                 'nullable',
                 'date',
@@ -201,26 +212,35 @@ class MarketController extends Controller
             'etape'   => 'nullable|string',
         ]);
 
-        // 5. Enregistrement en BDD en utilisant uniquement la variable $validated
+        // 5. Enregistrement en BDD
         Market::create([
-            'numero_reference'       => $validated['numero_reference'] ?? null,
-            'project_id'             => $validated['project_id'],
-            'project_module_id'      => $validated['project_module_id'] ?? null,
-            'objet'                  => $validated['objet'],
-            'methode_passation'      => $validated['methode_passation'] ?? null,
-            'besoin_financier'       => $validated['besoin_financier'],
-            'besoins_materiels'      => $validated['besoins_materiels'], // Casté automatiquement via $casts = ['besoins_materiels' => 'array'] sur le Modèle
-            'devise'                 => $project->budget_devise ?? $project->devise ?? $request->input('devise', 'USD'),
-            'candidature_start_date' => $validated['candidature_start_date'] ?? null,
-            'candidature_end_date'   => $validated['candidature_end_date'] ?? null,
-            'user_id'                => $validated['user_id'] ?? null,
-            'status'                 => $validated['status'] ?? 'Non attribué',
-            'etape'                  => $validated['etape'] ?? 'EXPRESSION_BESOIN',
-            'created_by'             => Auth::id(),
+            'numero_reference'                  => $validated['numero_reference'] ?? null,
+            'project_id'                        => $validated['project_id'],
+            'project_module_id'                 => $validated['project_module_id'] ?? null,
+            'objet'                             => $validated['objet'],
+            'methode_passation'                 => $validated['methode_passation'] ?? null,
+            'comite_depouillement'              => $validated['comite_depouillement'] ?? null,
+            'comite_analyse'                    => $validated['comite_analyse'] ?? null,
+            'besoin_financier'                  => $validated['besoin_financier'],
+            'besoins_materiels'                 => $validated['besoins_materiels'],
+            'devise'                            => $project->budget_devise ?? $project->devise ?? $request->input('devise', 'USD'),
+            'candidature_start_date'            => $validated['candidature_start_date'] ?? null,
+            'candidature_end_date'              => $validated['candidature_end_date'] ?? null,
+            'date_attribution_provisoire'       => $validated['date_attribution_provisoire'] ?? null,
+            'fin_periode_contestation'          => $validated['fin_periode_contestation'] ?? null,
+            'date_attribution_definitive'       => $validated['date_attribution_definitive'] ?? null,
+            'sous_recours_anrmp'                => $validated['sous_recours_anrmp'] ?? false,
+            'statut_recours_anrmp'              => $validated['statut_recours_anrmp'] ?? null,
+            'motif_recours_anrmp'               => $validated['motif_recours_anrmp'] ?? null,
+            'date_attestation_bonne_execution'  => $validated['date_attestation_bonne_execution'] ?? null,
+            'user_id'                           => $validated['user_id'] ?? null,
+            'status'                            => $validated['status'] ?? 'Non attribué',
+            'etape'                             => $validated['etape'] ?? 'EXPRESSION_BESOIN',
+            'created_by'                        => Auth::id(),
         ]);
 
         return redirect()->route('passation.index')
-            ->with('success', 'Le marché et sa proposition technique ont été enregistrés avec succès !');
+            ->with('success', 'Le marché, la configuration COJO et les jalons ont été enregistrés avec succès !');
     }
 
     /**
@@ -228,9 +248,7 @@ class MarketController extends Controller
      */
     public function indexPublique()
     {
-        // Charger les marchés par lots de 10 (ou le nombre de ton choix) pour alléger la requête
         $markets = Market::with(['project', 'module'])->latest()->paginate(10);
-
         return view('pages.marche.liste', compact('markets'));
     }
 
@@ -240,38 +258,31 @@ class MarketController extends Controller
     public function showPublique($id)
     {
         $marche = Market::with(['project', 'module'])->findOrFail($id);
-
         return view('pages.candidature-form', compact('marche'));
     }
 
-    //postuler à un marché spécifique
+    // Postuler à un marché spécifique
     public function postuler(Request $request, $id)
     {
         $marche = Market::findOrFail($id);
 
-        // 1. Vérification de la date limite de dépôt
         if ($marche->candidature_end_date && now()->greaterThan($marche->candidature_end_date)) {
             return redirect()->back()->with('error', 'La date limite de dépôt des dossiers pour ce marché est dépassée.');
         }
 
-        // 2. Validation stricte (Tout doit être fourni, sinon échec)
         $validated = $request->validate([
             'nom_candidat'              => 'required|string|max:255',
             'email_candidat'            => 'required|email|max:255',
             'numero_registre_commerce'  => 'required|string|max:100',
-
-            // Validation assouplie : accepte n'importe quel fichier valide sous la taille maximale
             'file_rccm'                 => 'required|file|max:10240',
             'file_acte_constitution'    => 'nullable|file|max:10240',
             'file_dfe'                  => 'required|file|max:10240',
             'file_arf'                  => 'required|file|max:10240',
             'file_cnps'                 => 'required|file|max:10240',
             'file_attestation_bancaire' => 'required|file|max:10240',
-
             'proposition_financiere'    => 'required|numeric|min:0',
         ]);
 
-        // 3. Stockage sécurisé des fichiers PDF
         $pathRccm     = $request->file('file_rccm')->store('candidatures/rccm', 'public');
         $pathDfe      = $request->file('file_dfe')->store('candidatures/dfe', 'public');
         $pathArf      = $request->file('file_arf')->store('candidatures/arf', 'public');
@@ -281,8 +292,7 @@ class MarketController extends Controller
             ? $request->file('file_acte_constitution')->store('candidatures/actes_constitution', 'public')
             : null;
 
-        // 4. Vérification du plafond budgétaire (Filtre financier initial)
-        $budgetMax = $marche->besoin_financier_fcfa ?? $marche->besoin_financier ?? $marche->montant_max ?? 0;
+        $budgetMax = $marche->besoin_financier_fcfa ?? $marche->besoin_financier ?? 0;
 
         $estConformeFinancierement = true;
         $motif = "Dossier complet et offre financière conforme au budget.";
@@ -292,8 +302,7 @@ class MarketController extends Controller
             $motif = "Offre financière supérieure au besoin financier du marché (" . number_format($budgetMax, 0, ',', ' ') . " FCFA).";
         }
 
-        // 5. Enregistrement en base de données
-        $candidature = Candidature::create([
+        Candidature::create([
             'marche_id'                 => $marche->id,
             'nom_candidat'              => $validated['nom_candidat'],
             'email_candidat'            => $validated['email_candidat'],
@@ -305,68 +314,61 @@ class MarketController extends Controller
             'file_cnps'                 => $pathCnps,
             'file_attestation_bancaire' => $pathBancaire,
             'proposition_financiere'    => $validated['proposition_financiere'],
-
             'statut_candidature'        => $estConformeFinancierement ? 'accepté' : 'refusé',
             'statut_marche'             => 'en attente',
             'motif_statut'              => $motif,
         ]);
 
-        return redirect()->back()->with('success', 'Votre candidature a été transmise avec succès et est en cours d\'évaluation.');
+        return redirect()->back()->with('success', 'Votre candidature a été transmise avec succès et sera examinée lors du dépouillement public de la COJO.');
     }
 
-    // 1. Afficher la liste des candidatures
     public function candidatureIndex()
     {
-        // Utilisation de la pagination au lieu de tout charger d'un coup
         $candidatures = Candidature::with('market')->latest()->paginate(15);
-
         return view('profile.menus.candidatures.liste', compact('candidatures'));
     }
 
-    // 2. Méthode d'arbitrage (Sélection automatique du moins-disant)
+    /**
+     * Arbitrage et Attribution Provisoire par la COJO (Comité d'Ouverture et de Jugement des Offres)
+     */
     public function arbitrer($marcheId)
     {
-        // SÉCURITÉ BACKEND : Seul le Comité Technique peut arbitrer
-        if (auth()->user()->role->name !== 'comite_technique') {
-            abort(403, 'Action non autorisée. Seul le Comité Technique est habilité à désigner l\'attributaire d\'un marché.');
+        // Sécurité : Seuls les membres habilités COJO ou l'administration peuvent arbitrer
+        $userRole = auth()->user()->role->name ?? '';
+        if (!in_array($userRole, ['cojo', 'cojo_analyse', 'comite_technique'])) {
+            abort(403, 'Action non autorisée. Seule la COJO est habilitée à attribuer provisoirement le marché.');
         }
 
         $marche = Market::with('candidatures')->findOrFail($marcheId);
-
-        // Récupérer uniquement les candidatures acceptées administrativement et financièrement
         $candidaturesValides = $marche->candidatures()->where('statut_candidature', 'accepté')->get();
 
         if ($candidaturesValides->isEmpty()) {
             return redirect()->back()->with('error', 'Aucune candidature valide pour procéder à l\'attribution.');
         }
 
-        // Trouver l'offre la moins disante (le montant le plus bas)
+        // Désignation du moins-disant par le comité d'analyse
         $moinsDisant = $candidaturesValides->sortBy('proposition_financiere')->first();
 
         foreach ($candidaturesValides as $candidature) {
             if ($candidature->id === $moinsDisant->id) {
-                // Attributaire du marché
                 $candidature->update([
                     'statut_marche' => 'tributaire',
-                    'motif_statut'  => 'Offre retenue : moins-disant de la consultation.'
+                    'motif_statut'  => 'Attribution provisoire retenue par la COJO (moins-disant).'
                 ]);
 
-                // Envoyer l'e-mail de succès au gagnant
                 if (!empty($candidature->email_candidat)) {
                     try {
                         Mail::to($candidature->email_candidat)->send(new NotificationAttributionMarche($candidature, true));
                     } catch (\Exception $e) {
-                        \Log::error("Erreur d'envoi d'e-mail (attributaire) : " . $e->getMessage());
+                        \Log::error("Erreur d'envoi d'e-mail (attributaire provisoire) : " . $e->getMessage());
                     }
                 }
             } else {
-                // Les autres candidats valides mais non retenus
                 $candidature->update([
                     'statut_marche' => 'rejeté',
-                    'motif_statut'  => 'Offre conforme mais non retenue (autre candidat moins-disant).'
+                    'motif_statut'  => 'Offre non retenue à l\'issue de l\'analyse de la COJO.'
                 ]);
 
-                // Envoyer l'e-mail de refus
                 if (!empty($candidature->email_candidat)) {
                     try {
                         Mail::to($candidature->email_candidat)->send(new NotificationAttributionMarche($candidature, false));
@@ -377,14 +379,21 @@ class MarketController extends Controller
             }
         }
 
-        return redirect()->back()->with('success', 'L\'attribution du marché a été effectuée avec succès au profit du moins-disant.');
+        // Mise à jour automatique des jalons du marché (Attribution provisoire + Ouverture de la période ANRMPCI de 7 jours)
+        $marche->update([
+            'etape'                       => 'ATTRIBUTION_PROVISOIRE',
+            'date_attribution_provisoire' => now(),
+            'fin_periode_contestation'    => now()->addDays(7), // 7 jours de recours légal
+        ]);
+
+        return redirect()->back()->with('success', 'Attribution provisoire prononcée par la COJO. La période de recours ANRMPCI de 7 jours est ouverte.');
     }
 
-    // 3. Évaluation manuelle d'une offre (via la modale)
     public function evaluer(Request $request, Candidature $candidature)
     {
-        if (auth()->user()->role->name !== 'comite_technique') {
-            abort(403, 'Action non autorisée. Seul le Comité Technique est habilité à évaluer les candidatures.');
+        $userRole = auth()->user()->role->name ?? '';
+        if (!in_array($userRole, ['cojo', 'cojo_analyse', 'comite_technique'])) {
+            abort(403, 'Action non autorisée.');
         }
 
         $validated = $request->validate([
@@ -404,10 +413,10 @@ class MarketController extends Controller
                 Mail::to($candidature->email_candidat)
                     ->send(new NotificationStatutCandidature($candidature));
             } catch (\Exception $e) {
-                \Log::error("Erreur d'envoi d'e-mail (évaluation manuelle) : " . $e->getMessage());
+                \Log::error("Erreur d'envoi d'e-mail : " . $e->getMessage());
             }
         }
 
-        return redirect()->back()->with('success', 'Évaluation et notification mises à jour avec succès.');
+        return redirect()->back()->with('success', 'Évaluation mise à jour avec succès.');
     }
 }

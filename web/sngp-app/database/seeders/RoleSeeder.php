@@ -85,10 +85,24 @@ class RoleSeeder extends Seeder
                 'description' => 'Autorité de tutelle - Consultation des tableaux de bord analytiques et bilans',
                 'platform' => 'laravel_web'
             ],
+            // Rôles COJO (Comité d'Ouverture et de Jugement des Offres) - Sous-comités
             [
-                'name' => 'comite_technique',
-                'label' => 'Comité Technique',
-                'description' => 'Membre du comité technique - Analyse, évaluation des candidatures et désignation des attributaires de marchés',
+                'name' => 'cojo_depouillement',
+                'label' => 'Comité de Dépouillement (COJO)',
+                'description' => 'Membre du comité de dépouillement (Président, Secrétaire, Membres) - Réception et dépouillement public des offres en présence des candidats',
+                'platform' => 'laravel_web'
+            ],
+            [
+                'name' => 'cojo_analyse',
+                'label' => 'Comité d\'Analyse (COJO)',
+                'description' => 'Membre du comité d\'analyse (Président, Secrétaire, Membres) - Analyse technique et financière des candidatures en huis clos et attribution provisoire',
+                'platform' => 'laravel_web'
+            ],
+            // Rôle ANRMPCI (Organe de régulation)
+            [
+                'name' => 'anrmp',
+                'label' => 'ANRMPCI',
+                'description' => 'Autorité Nationale de Régulation des Marchés Publics de Côte d\'Ivoire - Instruction des recours (7 jours), injonctions de réexamen et annulation de procédures',
                 'platform' => 'laravel_web'
             ],
         ];
